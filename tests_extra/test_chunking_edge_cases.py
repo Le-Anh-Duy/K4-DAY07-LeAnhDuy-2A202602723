@@ -5,7 +5,7 @@ lại những ca đã thực sự hỏng khi chạy trên corpus Shopee, để c
 thầm hỏng lại: viết tắt, số thập phân, URL, ellipsis giữa câu, đánh số mục,
 và chunk vụn 1 ký tự do đầu mục bị xả riêng.
 
-    pytest tests/test_chunking_edge_cases.py -v
+    pytest tests_extra/ -v
 """
 
 from pathlib import Path
