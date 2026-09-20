@@ -55,15 +55,15 @@ Giải thích cách tiếp cận của bạn khi lập trình (implement) các p
 ### Lớp EmbeddingStore
 
 **`add_documents` + `search`** — hướng tiếp cận:
-> *Viết 2-3 câu: lưu trữ thế nào? Tính độ tương tự ra sao?*
+> Bỏ hẳn nhánh ChromaDB, chỉ dùng list record trong bộ nhớ: mỗi `Document` thành một record gồm `id`, `content`, bản **copy** của metadata và embedding tính sẵn lúc nạp. `search` embed query rồi chấm điểm bằng `compute_similarity` (cosine thật, không dùng dot product trần — để còn đúng khi đổi sang backend không chuẩn hóa vector), sắp giảm dần rồi cắt `top_k` và bỏ trường `embedding` khỏi kết quả.
 
 **`search_with_filter` + `delete_document`** — hướng tiếp cận:
-> *Viết 2-3 câu: lọc (filter) trước hay sau? Xóa bằng cách nào?*
+> **Lọc trước rồi mới xếp hạng.** Lấy `top_k` trước rồi mới loại cái không khớp thì có thể còn 0 kết quả dù store vẫn còn tài liệu hợp lệ, vì k chỗ đã bị tài liệu sai chiếm hết. Cả `search` và `search_with_filter` đều gọi chung helper `_rank`, chỉ khác tập ứng viên nên kết quả không thể lệch nhau. `delete_document` lọc bỏ mọi record có `metadata['doc_id']` khớp rồi so số lượng trước/sau để trả `True`/`False` — `add_documents` đã `setdefault("doc_id", doc.id)` nên tài liệu nạp với metadata rỗng vẫn xoá được.
 
 ### Tác tử KnowledgeBaseAgent
 
 **`answer`** — hướng tiếp cận:
-> *Viết 2-3 câu: cấu trúc prompt? Cách đưa ngữ cảnh (inject context) vào thế nào?*
+> Ba nhịp: truy xuất top-k → dựng prompt → gọi `llm_fn`. Ngữ cảnh được đánh số `[1] [2] [3]` kèm nguồn (`source_url` → `source` → `doc_id`) và prompt yêu cầu model trích dẫn số hiệu đó, nhờ vậy câu trả lời truy vết được về đúng chunk và đúng file (tiêu chí *Source Traceability*). Prompt ràng buộc chỉ dùng ngữ cảnh được cấp; store rỗng hoặc filter loại hết thì trả thẳng câu thông báo chứ không gọi LLM vô ích.
 
 ---
 
@@ -74,10 +74,23 @@ Vượt qua bộ kiểm thử là điều kiện tính điểm phần này.
 ### Kết Quả Kiểm Thử (Test Results)
 
 ```
-# Dán kết quả (output) của: pytest tests/ -v
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-9.1.1, pluggy-1.6.0 -- D:\Coding\Vin AI Thực Chiến\Lab Work\K4-DAY07-LeAnhDuy-2A202602723\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Coding\Vin AI Thực Chiến\Lab Work\K4-DAY07-LeAnhDuy-2A202602723
+tests/test_solution.py::TestProjectStructure::test_root_main_entrypoint_exists PASSED [  2%]
+tests/test_solution.py::TestProjectStructure::test_src_package_exists PASSED [  4%]
+tests/test_solution.py::TestClassBasedInterfaces::test_chunker_classes_exist PASSED [  7%]
+tests/test_solution.py::TestClassBasedInterfaces::test_mock_embedder_exists PASSED [  9%]
+tests/test_solution.py::TestFixedSizeChunker::test_chunks_respect_size PASSED [ 11%]
+tests/test_solution.py::TestFixedSizeChunker::test_correct_number_of_chunks_no_overlap PASSED [ 14%]
+... (36 test còn lại đều PASSED) ...
+============================= 42 passed in 0.04s ==============================
 ```
 
-**Số lượng bài test vượt qua (pass):** __ / 42
+**Số lượng bài test vượt qua (pass):** **42** / 42
+
+> Ngoài ra `pytest tests_extra/ -q` → 20 passed: bộ test edge case tự viết cho chunker (viết tắt, số thập phân, URL, đánh số điều khoản, số La Mã, ellipsis giữa câu) cùng hai bất biến chạy trên corpus thật.
 
 ---
 

@@ -27,23 +27,23 @@
       "id": "Q2",
       "question_type": "tra_so_lieu",
       "query": "Hàng bị hư hại trong quá trình vận chuyển thì phải khiếu nại trong vòng bao nhiêu ngày?",
-      "gold_answer": "Với Người Bán: hàng bị hư hại/không còn nguyên vẹn khi hoàn trả phải khiếu nại trong 03 ngày, hàng bị thất lạc khi hoàn trả trong 07 ngày, tính từ khi đơn được cập nhật trạng thái chuyển hoàn thành công. Với Người Mua thì mốc là 15 ngày theo Chính sách Trả hàng và Hoàn tiền — đây là lý do câu này cần lọc audience.",
+      "gold_answer": "Hỏi với tư cách Người Mua: gửi yêu cầu trả hàng/hoàn tiền trong vòng 15 ngày kể từ khi đơn hàng được cập nhật giao hàng thành công, riêng thực phẩm tươi sống và đông lạnh là 24 giờ. (Cùng câu hỏi này, Người Bán lại có mốc khác: 03 ngày khi hàng hư hại và 07 ngày khi hàng thất lạc lúc hoàn trả, theo 77250 mục D.1.b.)",
       "gold_spans": [
         {
-          "doc_id": "77250",
-          "start": 14001,
-          "end": 14778
+          "doc_id": "77251",
+          "start": 3085,
+          "end": 3595
         }
       ],
-      "anchor": "03 ngày",
+      "anchor": "trong vòng 24 giờ kể từ lúc đơn hàng được cập nhật giao hàng thành công",
       "metadata_filter": {
-        "audience": "seller"
+        "audience": "buyer"
       },
-      "note": "Cau duy nhat can metadata_filter: 77250 (seller) va 77251 (buyer) cung tu vung nhung khac dap an.",
+      "note": "Cau duy nhat can metadata_filter. Cau hoi co y khong neu nguoi hoi la ai nen co HAI dap an dung tuy doi tuong. Khong loc thi bang xep hang nghieng han ve 77250 (seller) vi cau hoi mang tu vung 'van chuyen'/'khieu nai' cua tai lieu do, nen nguoi mua nhan ve dap an danh cho nguoi ban. Loc audience=buyer moi ra dung moc 15 ngay/24 gio.",
       "gold_chunk_ids": [
-        "77250_14001_14778"
+        "77251_3085_3595"
       ],
-      "evidence": "Khiếu nại vận chuyển với đơn Giao không thành công (dành cho Người Bán):\n\n   i. Đơn được cập nhật trạng thái chuyển hoàn thành công:\n\n- Hàng bị thất lạc khi hoàn trả: trong vòng 07 ngày sau khi đơn hàng được cập nhật trạng thái chuyển hoàn thành công. \n\n- Hàng bị hư hại/ không còn nguyên vẹn khi hoàn trả: trong vòng 03 ngày sau khi đơn hàng được cập nhật trạng thái chuyển hoàn thành công.\n\n   ii. Đơn được cập nhật trạng thái chuyển hoàn không thành công: Đơn sẽ được lưu tại kho của đơn vị vận chuyển và xử lý theo quy định. Nếu quá hạn 30 ngày (riêng đối với kênh Hỏa tốc là 21 ngày) mà Người Bán không liên hệ với Shopee để xử lý đơn hàng, Shopee miễn trừ trách nhiệm, và sẽ không giải quyết bất kỳ khiếu nại, yêu cầu bồi thường nào phát sinh sau thời hạn này.\n\n   c."
+      "evidence": "3.2. Người Mua có thể gửi yêu cầu trả hàng/hoàn tiền trong vòng 15 (mười lăm) ngày kể từ lúc đơn hàng được cập nhật giao hàng thành công. Riêng đối với các Sản Phẩm là thực phẩm tươi sống và đông lạnh, Người Mua cần gửi yêu cầu trả hàng/hoàn tiền trong vòng 24 giờ kể từ lúc đơn hàng được cập nhật giao hàng thành công. Một số trường hợp Người Mua có nhu cầu trả hàng/hoàn tiền sau thời hạn trên, Shopee sẽ xem xét và có thể hỗ trợ Người Mua được trả hàng/hoàn tiền trong phạm vi phù hợp với Chính Sách Shopee."
     },
     {
       "id": "Q3",
