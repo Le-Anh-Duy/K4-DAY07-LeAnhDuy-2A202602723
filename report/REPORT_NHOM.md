@@ -59,23 +59,33 @@
 
 Chạy `ChunkingStrategyComparator().compare()` trên 2-3 tài liệu:
 
+> Chạy `compare(body, chunk_size=800)` trên phần thân tài liệu (đã bỏ frontmatter, nếu không là đang đo cả khối YAML).
+
 | Tài liệu | Chiến lược (Strategy) | Số lượng Chunk | Độ dài trung bình | Giữ được ngữ cảnh không? |
 |-----------|----------|-------------|------------|-------------------|
-| | FixedSizeChunker (`fixed_size`) | | | |
-| | SentenceChunker (`by_sentences`) | | | |
-| | RecursiveChunker (`recursive`) | | | |
+| 77251 Trả hàng & hoàn tiền | FixedSizeChunker (`fixed_size`) | 28 | 778 | Kém — cắt cứng giữa câu, điều khoản bị chẻ đôi |
+| 77251 | SentenceChunker (`by_sentences`) | 33 | 591 | Tốt — không cắt giữa câu, nhưng chunk ngắn dễ mất bối cảnh mục |
+| 77251 | RecursiveChunker (`recursive`) | 31 | 631 | Tốt nhất — bám ranh giới đoạn trước, chỉ hạ xuống câu khi cần |
+| 77250 Chính sách vận chuyển | FixedSizeChunker (`fixed_size`) | 35 | 781 | Kém |
+| 77250 | SentenceChunker (`by_sentences`) | 44 | 550 | Trung bình — nhiều chunk vụn ở phần bảng biểu |
+| 77250 | RecursiveChunker (`recursive`) | 37 | 662 | Tốt |
+| 77265 Giải quyết tranh chấp | FixedSizeChunker (`fixed_size`) | 7 | 765 | Kém |
+| 77265 | SentenceChunker (`by_sentences`) | 10 | 485 | Trung bình |
+| 77265 | RecursiveChunker (`recursive`) | 9 | 540 | Tốt |
+
+> `fixed_size` luôn cho độ dài TB sát trần 800 vì nó cắt theo vị trí, không theo nội dung — đều đặn nhưng vô nghĩa về ngữ nghĩa. `recursive` cho số chunk gần `fixed_size` mà vẫn tôn trọng ranh giới đoạn, nên là điểm cân bằng tốt nhất trên corpus này.
 
 ### Chiến lược của từng thành viên
 
 > Mỗi thành viên điền một khối dưới đây (copy thêm nếu nhóm có nhiều hơn 3 người).
 
-**Thành viên 1 — [Tên]**
-- **Loại chiến lược:** [FixedSize / Sentence / Recursive / custom]
-- **Mô tả & lý do chọn cho chủ đề này:** *(2-3 câu)*
-- **Code snippet (nếu custom):**
-```python
-# Dán mã nguồn (implementation) vào đây
-```
+**Thành viên 1 — Lê Anh Duy**
+- **Loại chiến lược:** Recursive — `RecursiveChunker(chunk_size=800)` → 419 chunk / 7 tài liệu
+- **Mô tả & lý do chọn cho chủ đề này:** Văn bản quy định Shopee được soạn theo đoạn và điều khoản đánh số, nên cắt theo ranh giới đoạn (`"
+
+"`) trước rồi mới hạ dần xuống `"
+"` → `". "` giữ được trọn vẹn một điều khoản trong một chunk. Chọn 800 ký tự vì baseline cho thấy mức này giữ độ dài TB ~630 mà vẫn không chẻ đôi điều khoản, trong khi `fixed_size` cắt cứng giữa câu và `by_sentences` sinh nhiều chunk vụn ở phần bảng biểu.
+- **Code snippet (nếu custom):** dùng chunker có sẵn, không viết tuỳ chỉnh. Hai chỗ phải sửa để chạy được trên dữ liệu thật: đệ quy trên cả `buffer + separator + piece` thay vì chỉ `piece` (nếu không đầu mục `m.` thành chunk 1 ký tự), và thêm trần `max_chars` cho `SentenceChunker` vì corpus có "câu" dài 3025 ký tự do liệt kê bằng dấu chấm phẩy.
 
 **Thành viên 2 — [Tên]**
 - **Loại chiến lược:**
@@ -122,29 +132,33 @@ Chạy `ChunkingStrategyComparator().compare()` trên 2-3 tài liệu:
 
 > Cách chấm (theo `docs/SCORING.md`): **2 điểm/câu** — top-3 chứa chunk liên quan + agent trả lời đúng (2), có liên quan nhưng thiếu/không ở top-1 (1), không có trong top-3 (0).
 
+> Số liệu dưới đây từ `recursive` (chiến lược của Lê Anh Duy), backend `gemini-embedding-001`. Cột "chiến lược tốt nhất" sẽ so lại khi các thành viên còn lại chạy xong.
+
 | # | Câu hỏi | Chiến lược tốt nhất cho câu này | Có chunk liên quan trong top-3? | Ghi chú |
 |---|---------|-------------------------------|-------------------------------|---------|
-| 1 | | | | |
-| 2 | | | | |
-| 3 | | | | |
-| 4 | | | | |
-| 5 | | | | |
+| 1 | Shopee Mall gửi trả trong bao nhiêu ngày | recursive (2/2) | **Có**, ở top-1 (0.826) | Vùng gold nằm trọn trong 1 chunk |
+| 2 | Hàng hư hại khiếu nại bao nhiêu ngày *(lọc)* | recursive (0/2) | Không | Lọc đúng tài liệu 77251 nhưng trúng mục 3.1 thay vì 3.2 |
+| 3 | Trường hợp nào được trả hàng/hoàn tiền | recursive (0/2) | Không | Top-3 đúng chủ đề nhưng từ 77243/77262, sai tài liệu |
+| 4 | Quy trình tranh chấp mấy bước | recursive (2/2) | **Có**, ở top-1 (0.815) | Cả hai bản sao 77245 và 77265 đều lọt top-2 |
+| 5 | Nội dung cấm đăng bán | recursive (2/2) | **Có**, cả 3 vị trí | Danh mục a–m tập trung trong ít chunk |
+
+**Tổng: 6/10 điểm.**
 
 **Lọc bằng metadata có giúp ích không? Ở câu hỏi nào?**
-> *Viết 2-3 câu:*
+> Có, ở câu 2 — A/B chứng minh rõ: **không lọc** thì top-3 toàn 77250 (`seller`, mốc 03/07 ngày), **lọc `audience=buyer`** thì top-3 chuyển hẳn sang 77251 (`buyer`, mốc 15 ngày). Cùng một câu hỏi, metadata quyết định người hỏi nhận về đáp án của ai; không lọc thì người mua nhận nhầm quy định dành cho người bán. Nhưng filter chỉ giải quyết được một nửa: nó chọn đúng *tài liệu* chứ không chọn đúng *đoạn*, nên câu 2 vẫn 0/2 vì trong chính 77251 thì mục 3.1 vẫn thắng mục 3.2.
 
 ---
 
 ## 4. Thuyết trình (Demo) & Bài học nhóm — Nhóm (5 điểm)
 
 **Những phân tích (insights) hay nhất nhóm sẽ trình bày:**
-> *Liệt kê 2-3 ý:*
+> 1) Cosine tuyệt đối vô nghĩa: hai câu không liên quan (phí vận chuyển vs thời tiết) vẫn đạt 0.655, trong khi top-1 đúng của benchmark chỉ 0.797 — chênh 0.14, nên không thể đặt ngưỡng, chỉ dùng được thứ hạng. 2) Chấm hai mức lộ ra sự thật: `77245` chép nguyên khối nội dung của `77246` và `77265`, nên chỉ kiểm `doc_id` trong top-3 là chấm oan — phải kiểm chuỗi neo trong ngữ cảnh. 3) `metadata_filter` chọn đúng tài liệu nhưng không chọn đúng đoạn.
 
 **Bài học rút ra khi so sánh trong nhóm:**
-> *Viết 2-3 câu — cùng tài liệu nhưng chiến lược khác nhau dẫn tới khác biệt gì?*
+> Trên cùng corpus, `fixed_size` luôn cho độ dài TB sát trần vì cắt theo vị trí chứ không theo nội dung, `by_sentences` sinh chunk vụn ở phần bảng biểu không có dấu kết câu, còn `recursive` cân bằng nhất. Khác biệt lớn nhất không nằm ở số chunk mà ở chỗ **ranh giới rơi vào đâu**: hai câu hỏi hỏng của nhóm đều do chunk chứa đáp án bị chia sai chỗ, không phải do embedding kém.
 
 **Nếu làm lại, nhóm sẽ thay đổi gì trong chiến lược dữ liệu (data strategy)?**
-> *Viết 2-3 câu:*
+> Thêm **overlap cho `recursive`** (hiện bằng 0) để điều khoản nằm sát ranh giới vẫn xuất hiện trọn trong ít nhất một chunk — đây là nguyên nhân trực tiếp của hai câu hỏng. Bổ sung metadata **cấp mục** (`section`, `clause_no`) chứ không chỉ cấp tài liệu, để lọc được tới đúng điều khoản thay vì chỉ tới đúng file; và khử trùng lặp `77245` với các tài liệu nó chép lại, vì hiện một nội dung tồn tại hai bản làm loãng bảng xếp hạng.
 
 ---
 

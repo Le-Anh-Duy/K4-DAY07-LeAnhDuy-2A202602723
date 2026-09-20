@@ -96,16 +96,18 @@ tests/test_solution.py::TestFixedSizeChunker::test_correct_number_of_chunks_no_o
 
 ## 4. Dự đoán độ tương tự (Similarity Predictions) — Cá nhân (5 điểm)
 
+> Đo bằng `gemini-embedding-001` (768 chiều, `task_type=SEMANTIC_SIMILARITY`), ngưỡng phân loại đặt ở 0.6.
+
 | Cặp | Câu A | Câu B | Dự đoán | Điểm thực tế | Đúng? |
 |------|-----------|-----------|---------|--------------|-------|
-| 1 | | | cao / thấp | | |
-| 2 | | | cao / thấp | | |
-| 3 | | | cao / thấp | | |
-| 4 | | | cao / thấp | | |
-| 5 | | | cao / thấp | | |
+| 1 | Tôi muốn trả lại hàng vì sản phẩm bị lỗi. | Làm sao để hoàn trả đơn hàng khi nhận được hàng hư hỏng? | cao | **0.912** | ✓ |
+| 2 | Phí vận chuyển Shopee được tính như thế nào? | Hôm nay Hà Nội trời mưa to. | thấp | **0.655** | ✗ |
+| 3 | Người bán phải đóng gói hàng hóa đúng quy định trước khi giao. | Người mua được quyền trả hàng trong vòng 15 ngày. | thấp | **0.784** | ✗ |
+| 4 | Đơn hàng bị hủy do người bán hết hàng. | Người bán không xác nhận đơn nên đơn hàng bị hủy. | cao | **0.938** | ✓ |
+| 5 | Shopee cấm bán hàng giả. | Shopee nghiêm cấm đăng bán sản phẩm nhái thương hiệu. | cao | **0.959** | ✓ |
 
 **Kết quả nào bất ngờ nhất? Điều này nói gì về cách embeddings biểu diễn ý nghĩa?**
-> *Viết 2-3 câu:*
+> Cặp 2: hai câu **không liên quan gì nhau** (phí vận chuyển vs thời tiết) vẫn đạt 0.655 — model có một "sàn tương tự" khá cao, chỉ cần cùng là tiếng Việt đã gần nhau sẵn, nên **giá trị cosine tuyệt đối gần như vô nghĩa**, chỉ thứ hạng tương đối mới dùng được. Cặp 3 cho thấy embedding mã hóa **chủ đề** chứ không mã hóa **vai trò**: hai câu cùng nói về chính sách Shopee nhưng khác hẳn đối tượng và nội dung vẫn được 0.784 — đây đúng là lý do câu hỏi không nêu người hỏi cần `metadata_filter` mới tách được người mua với người bán.
 
 ---
 
@@ -113,18 +115,22 @@ tests/test_solution.py::TestFixedSizeChunker::test_correct_number_of_chunks_no_o
 
 Chạy **5 câu hỏi đánh giá của nhóm** trên mã nguồn cá nhân của bạn trong gói `src`. **5 câu hỏi này phải trùng với các thành viên cùng nhóm** (xem `REPORT_NHOM.md`).
 
+> Chiến lược của tôi: `RecursiveChunker(chunk_size=800)` → 419 chunk. Backend `gemini-embedding-001` (768 chiều). Output đầy đủ: `ket_qua_benchmark.txt`. `llm_fn` ở bước benchmark là hàm giả nên cột cuối mô tả ngữ cảnh truy xuất được có đủ để trả lời hay không.
+
 | # | Câu hỏi (Query) | Top-1 Chunk truy xuất được (tóm tắt) | Điểm Score | Có liên quan không? (Relevant) | Câu trả lời của Agent (tóm tắt) |
 |---|-------|--------------------------------|-------|-----------|------------------------|
-| 1 | | | | | |
-| 2 | | | | | |
-| 3 | | | | | |
-| 4 | | | | | |
-| 5 | | | | | |
+| 1 | Shopee Mall: gửi trả sản phẩm trong bao nhiêu ngày? | `77262_2637_3355` — mục 1.2, "Sau khi Người Mua yêu cầu trả hàng/hoàn tiền…" | 0.826 | **Có** (2/2) | Ngữ cảnh chứa đúng mốc "06 (sáu) ngày lịch" |
+| 2 | Hàng hư hại khi vận chuyển, khiếu nại trong bao nhiêu ngày? *(lọc `audience=buyer`)* | `77251_2282_2946` — các trường hợp được trả hàng/hoàn tiền | 0.729 | **Không** (0/2) | Lọc đúng tài liệu người mua nhưng trúng mục 3.1 thay vì 3.2, thiếu mốc 15 ngày |
+| 3 | Người mua được trả hàng/hoàn tiền trong trường hợp nào? | `77243_55042_55775` — điều kiện hủy đơn ở giai đoạn "Chờ Xác Nhận" | 0.787 | **Không** (0/2) | Đúng chủ đề hoàn tiền nhưng sai tài liệu, không liệt kê được 7 trường hợp |
+| 4 | Quy trình giải quyết tranh chấp gồm mấy bước, xử lý bao lâu? | `77245_14704_15247` — "Bước 3: Khiếu nại Trả Hàng/Hoàn Tiền…" | 0.815 | **Có** (2/2) | Ngữ cảnh chứa "07 ngày làm việc" và đủ 4 bước |
+| 5 | Nội dung nào bị nghiêm cấm đăng bán? | `77245_52118_52876` — "a. Phản động, chống phá, bài xích tôn giáo…" | 0.817 | **Có** (2/2) | Ngữ cảnh chứa trọn danh mục a–m |
 
-**Bao nhiêu câu hỏi trả về chunk có liên quan trong top-3?** __ / 5
+**Bao nhiêu câu hỏi trả về chunk có liên quan trong top-3?** **3** / 5 — tổng **6/10 điểm** (Q1, Q4, Q5 đạt 2/2; Q2 và Q3 đều 0/2).
+
+> **Phân tích lỗi — Q2 và Q3 hỏng cùng một kiểu.** Cả hai đều bị chunk *đúng chủ đề nhưng không chứa con số trả lời được* đánh bại chunk có đáp án: cosine đo độ giống chủ đề chứ không đo mật độ thông tin. Q2 còn cho thấy filter chỉ giải quyết được một nửa — lọc `audience=buyer` đã kéo đúng tài liệu 77251 lên top-3, nhưng trong cùng tài liệu thì mục 3.1 (điều kiện trả hàng) vẫn thắng mục 3.2 (thời hạn 15 ngày) vì câu hỏi dùng từ "khiếu nại" hợp với mục 3.1 hơn.
 
 **Điều hay nhất tôi học được từ thành viên khác / nhóm khác (qua demo):**
-> *Viết 2-3 câu:*
+> *(điền sau buổi demo)*
 
 ---
 
