@@ -111,18 +111,42 @@ class GeminiEmbedder:
     ) -> None:
         from google import genai
 
-        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-        if not api_key:
-            raise RuntimeError("GEMINI_API_KEY (or GOOGLE_API_KEY) is required for GeminiEmbedder")
+        # Nhiều key = nhiều project = nhiều hạn mức độc lập. Xoay vòng khi đụng
+        # 429 thì vừa né được hạn mức ngày, vừa khỏi phải ngủ chờ hạn mức phút.
+        raw = os.getenv("GEMINI_API_KEYS") or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or ""
+        api_keys = [k.strip() for k in raw.split(",") if k.strip()]
+        if not api_keys:
+            raise RuntimeError("GEMINI_API_KEYS hoặc GEMINI_API_KEY là bắt buộc cho GeminiEmbedder")
         self.model_name = model_name
         self.dimensions = dimensions
-        self._backend_name = f"{model_name} ({dimensions}d)"
-        self.client = genai.Client(api_key=api_key)
+        self._clients = [genai.Client(api_key=key) for key in api_keys]
+        self._client_index = 0
+        self._exhausted: set[int] = set()
+        suffix = f", {len(self._clients)} key" if len(self._clients) > 1 else ""
+        self._backend_name = f"{model_name} ({dimensions}d{suffix})"
         # Cache khoá theo băm của (task_type, nội dung) — gọi lại API là mất tiền
         # và mất 5 phút chờ hạn mức, nên phải giữ lại được qua các lần chạy.
         self._cache: dict[str, list[float]] = {}
         self._cache_path = Path(cache_path) if cache_path else None
         self.load_cache()
+
+    @property
+    def client(self):
+        return self._clients[self._client_index]
+
+    def _rotate(self, exhaust_current: bool = False) -> bool:
+        """Chuyển sang key kế tiếp. Trả False khi mọi key đều đã cạn hạn mức ngày."""
+        if exhaust_current:
+            self._exhausted.add(self._client_index)
+        remaining = [i for i in range(len(self._clients)) if i not in self._exhausted]
+        if not remaining:
+            return False
+        current = self._client_index
+        if current in remaining:
+            self._client_index = remaining[(remaining.index(current) + 1) % len(remaining)]
+        else:
+            self._client_index = remaining[0]
+        return True
 
     def _key(self, task_type: str, text: str) -> str:
         return hashlib.sha256(f"{task_type}\x00{text}".encode()).hexdigest()
@@ -191,6 +215,40 @@ class GeminiEmbedder:
         for text, embedding in zip(batch, response.embeddings):
             self._cache[self._key(task_type, text)] = [float(value) for value in embedding.values]
 
+    def _embed_batch_with_rotation(self, batch: list[str], task_type: str,
+                                   cooldown: float, verbose: bool) -> None:
+        """Đụng 429 thì đổi key trước, chỉ ngủ chờ khi mọi key đều bị giới hạn."""
+        tried = 0
+        while True:
+            try:
+                self._embed_batch(batch, task_type)
+                return
+            except DailyQuotaExceeded:
+                if not self._rotate(exhaust_current=True):
+                    raise
+                if verbose:
+                    print(f"  → key #{self._client_index} (key trước hết hạn mức ngày)", flush=True)
+                tried = 0
+            except Exception as error:
+                # 403 = key hỏng/bị chặn hẳn, thử lại bao nhiêu lần cũng vô ích.
+                if "PERMISSION_DENIED" in str(error) or "API key not valid" in str(error):
+                    if verbose:
+                        print(f"  key #{self._client_index} bị từ chối (403), loại bỏ", flush=True)
+                    if not self._rotate(exhaust_current=True):
+                        raise
+                    tried = 0
+                    continue
+                delay = _retry_delay_seconds(error, default=cooldown)
+                tried += 1
+                if tried < len(self._clients) and self._rotate():
+                    if verbose:
+                        print(f"  đổi sang key #{self._client_index}", flush=True)
+                    continue
+                if verbose:
+                    print(f"  mọi key đều bị giới hạn, chờ {delay:.0f}s...", flush=True)
+                time.sleep(delay)
+                tried = 0
+
     def warm(
         self,
         texts: list[str],
@@ -211,18 +269,7 @@ class GeminiEmbedder:
             return
         batches = [pending[i : i + batch_size] for i in range(0, len(pending), batch_size)]
         for index, batch in enumerate(batches):
-            if index:
-                if verbose:
-                    print(f"  nghỉ {cooldown:.0f}s cho hạn mức reset...", flush=True)
-                time.sleep(cooldown)
-            try:
-                self._embed_batch(batch, task_type)
-            except Exception as error:  # 429 RESOURCE_EXHAUSTED -> chờ rồi thử lại một lần
-                delay = _retry_delay_seconds(error, default=cooldown)
-                if verbose:
-                    print(f"  bị giới hạn tốc độ, chờ {delay:.0f}s rồi thử lại...", flush=True)
-                time.sleep(delay)
-                self._embed_batch(batch, task_type)
+            self._embed_batch_with_rotation(batch, task_type, cooldown, verbose)
             self.save_cache()  # lưu sau MỖI lô: đứt giữa chừng vẫn không mất công đã làm
             if verbose:
                 done = min((index + 1) * batch_size, len(pending))

@@ -73,8 +73,15 @@ def main() -> int:
     load_dotenv(override=False)
     provider = (args.provider or os.getenv("EMBEDDING_PROVIDER", "mock")).strip().lower()
 
-    EmbeddingStore = importlib.import_module(f"{args.package}.store").EmbeddingStore
-    index_dir = INDEX_ROOT / args.package / args.strategy
+    # Các bạn trong nhóm chỉ nộp phần chunking, không có store.py riêng — dùng
+    # store của mình để phép so chỉ khác nhau đúng ở chiến lược chia nhỏ.
+    try:
+        EmbeddingStore = importlib.import_module(f"{args.package}.store").EmbeddingStore
+        store_from = args.package
+    except ModuleNotFoundError:
+        from src.store import EmbeddingStore
+        store_from = "src (package này chỉ có phần chunking)"
+    index_dir = INDEX_ROOT / Path(args.package).stem / args.strategy
     if not (index_dir / "vectors.npz").exists():
         print(f"Chưa có index ở {index_dir}. Chạy trước:")
         print(f"  python scripts/build_index.py --strategy {args.strategy} --provider {provider} --package {args.package}")
@@ -90,7 +97,7 @@ def main() -> int:
         backend_name=f"{model} ({dimensions}d, index có sẵn)",
     )
 
-    print(f"Package    : {args.package}")
+    print(f"Package    : {args.package}  |  store: {store_from}")
     print(f"Chiến lược : {args.strategy}")
     print(f"Index      : {len(documents)} chunk từ {index_dir}")
     print(f"Backend    : {embedder._backend_name}\n")

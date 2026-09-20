@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import importlib
+import importlib.util
 import os
 import sys
 from pathlib import Path
@@ -27,13 +28,29 @@ from src.embeddings import GeminiEmbedder, LocalEmbedder, OpenAIEmbedder, _mock_
 from src.indexing import INDEX_ROOT, chunk_corpus, save_chunks, save_vectors
 
 
+def load_chunking_module(package: str):
+    """Nạp module chunking của người nộp bài.
+
+    Nhận cả tên package (`src`, `src_khang`) lẫn đường dẫn tới file `.py` rời —
+    bài nộp của các bạn là file đơn, tên lại có dấu gạch nối nên không import
+    theo kiểu module thông thường được.
+    """
+    path = Path(package)
+    if path.suffix == ".py":
+        spec = importlib.util.spec_from_file_location(path.stem.replace("-", "_"), path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+    return importlib.import_module(f"{package}.chunking")
+
+
 def make_chunker(package: str, strategy: str):
-    """Lấy chunker từ package của người nộp bài — mỗi thành viên tự viết src/ của mình.
+    """Lấy chunker từ code của người nộp bài — mỗi thành viên tự viết phần của mình.
 
     SentenceChunker của mỗi người có chữ ký khác nhau (max_chars là thứ tôi tự
     thêm), nên thử tham số đầy đủ trước rồi lùi về tham số chuẩn của lab.
     """
-    chunking = importlib.import_module(f"{package}.chunking")
+    chunking = load_chunking_module(package)
     if strategy == "fixed":
         return chunking.FixedSizeChunker(chunk_size=800, overlap=80)
     if strategy == "recursive":
@@ -68,7 +85,7 @@ def main() -> int:
     provider = (args.provider or os.getenv("EMBEDDING_PROVIDER", "mock")).strip().lower()
 
     documents = chunk_corpus(make_chunker(args.package, args.strategy))
-    out_dir = INDEX_ROOT / args.package / args.strategy
+    out_dir = INDEX_ROOT / Path(args.package).stem / args.strategy
     count = save_chunks(out_dir / "chunks.jsonl", documents)
     print(f"[1/2] chunk : {count} chunk → {out_dir / 'chunks.jsonl'}")
 

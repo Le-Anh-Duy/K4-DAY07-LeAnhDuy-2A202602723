@@ -30,7 +30,16 @@ STRATEGIES = ["fixed", "sentence", "recursive"]
 def evaluate(strategy: str, gold: dict, query_embedder, package: str = "src", top_k: int = 3) -> dict:
     index_dir = INDEX_ROOT / package / strategy
     documents = load_chunks(index_dir / "chunks.jsonl")
-    by_id, _, _ = load_vectors(index_dir / "vectors.npz")
+    by_id, model, dimensions = load_vectors(index_dir / "vectors.npz")
+
+    # Vector tài liệu và vector câu hỏi phải cùng một không gian, nếu không thì
+    # điểm số là nhiễu thuần tuý — đây là lỗi đã thực sự xảy ra một lần.
+    probe = len(query_embedder("kiểm tra số chiều"))
+    if probe != dimensions:
+        raise SystemExit(
+            f"Backend không khớp: index '{strategy}' là {model} ({dimensions} chiều) "
+            f"nhưng embedder cho câu hỏi trả về {probe} chiều. Truyền đúng --provider."
+        )
 
     EmbeddingStore = importlib.import_module(f"{package}.store").EmbeddingStore
     store = EmbeddingStore(
@@ -63,10 +72,11 @@ def evaluate(strategy: str, gold: dict, query_embedder, package: str = "src", to
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--package", default="src", help="package chứa code của người nộp")
+    parser.add_argument("--provider", default=None, help="gemini | openai | local | mock")
     args = parser.parse_args()
 
     load_dotenv(override=False)
-    provider = os.getenv("EMBEDDING_PROVIDER", "mock").strip().lower()
+    provider = (args.provider or os.getenv("EMBEDDING_PROVIDER", "mock")).strip().lower()
     gold = json.loads(GOLD_PATH.read_text(encoding="utf-8"))
     query_embedder = make_query_embedder(provider)
 
