@@ -127,6 +127,8 @@ Chạy **5 câu hỏi đánh giá của nhóm** trên mã nguồn cá nhân củ
 
 **Bao nhiêu câu hỏi trả về chunk có liên quan trong top-3?** **3** / 5 — tổng **6/10 điểm** (Q1, Q4, Q5 đạt 2/2; Q2 và Q3 đều 0/2).
 
+> Tôi chạy thêm hai chiến lược còn lại trên cùng code của mình: **`fixed` 8/10** và **`sentence` 7/10**, tức chiến lược tôi chọn (`recursive`) lại là chiến lược **kém nhất** trong ba. Nguyên nhân ở mục phân tích lỗi bên dưới. Bảng đối chiếu 11 ô của cả nhóm nằm ở `REPORT_NHOM.md` mục 2 và `ket_qua_benchmark.txt`.
+
 > **Phân tích lỗi — Q2 và Q3 hỏng cùng một kiểu.** Cả hai đều bị chunk *đúng chủ đề nhưng không chứa con số trả lời được* đánh bại chunk có đáp án: cosine đo độ giống chủ đề chứ không đo mật độ thông tin. Q2 còn cho thấy filter chỉ giải quyết được một nửa — lọc `audience=buyer` đã kéo đúng tài liệu 77251 lên top-3, nhưng trong cùng tài liệu thì mục 3.1 (điều kiện trả hàng) vẫn thắng mục 3.2 (thời hạn 15 ngày) vì câu hỏi dùng từ "khiếu nại" hợp với mục 3.1 hơn.
 
 **Điều hay nhất tôi học được từ thành viên khác / nhóm khác (qua demo):**
@@ -136,11 +138,11 @@ Chạy **5 câu hỏi đánh giá của nhóm** trên mã nguồn cá nhân củ
 
 ## Tự Đánh Giá (Phần Cá Nhân)
 
-| Tiêu chí | Điểm tự đánh giá |
-|----------|-------------------|
-| Khởi động (Warm-up) | / 5 |
-| Hướng tiếp cận của tôi (My Approach) | / 10 |
-| Hoàn thiện code (Core Implementation — tests) | / 30 |
-| Dự đoán độ tương tự (Similarity Predictions) | / 5 |
-| Kết quả truy xuất của tôi (Competition Results) | / 10 |
-| **Tổng phần cá nhân** | **/ 60** |
+| Tiêu chí | Điểm tự đánh giá | Căn cứ |
+|----------|-------------------|--------|
+| Khởi động (Warm-up) | **5** / 5 | Đủ 2 bài: cosine (kèm cặp cao/thấp trong domain) và phép tính chunking 23 chunk, có kiểm chứng ngược bằng `FixedSizeChunker` |
+| Hướng tiếp cận của tôi (My Approach) | **9** / 10 | Giải thích đủ 5 phần của `src`, kèm lý do thiết kế và 2 lỗi tự tìm ra khi chạy trên dữ liệu thật. Trừ 1 vì phần `agent.answer` còn mỏng |
+| Hoàn thiện code (Core Implementation — tests) | **30** / 30 | `pytest tests/ -v` → 42/42 passed, không còn `NotImplementedError`; `main.py` chạy trọn vẹn |
+| Dự đoán độ tương tự (Similarity Predictions) | **5** / 5 | Đủ 5 cặp đo bằng embedding thật, 2/5 dự đoán sai và phần phản ngẫm rút ra được kết luận dùng được (cosine tuyệt đối vô nghĩa) |
+| Kết quả truy xuất của tôi (Competition Results) | **6** / 10 | Chiến lược tôi chọn (`recursive`) đạt đúng 6/10. Chạy thêm `fixed` 8/10 và `sentence` 7/10 để đối chiếu, kèm phân tích nguyên nhân 2 câu hỏng |
+| **Tổng phần cá nhân** | **55 / 60** | |

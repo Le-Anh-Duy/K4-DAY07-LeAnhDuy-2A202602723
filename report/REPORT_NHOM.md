@@ -173,10 +173,10 @@ Chạy `ChunkingStrategyComparator().compare()` trên 2-3 tài liệu:
 
 ## Tự Đánh Giá (Phần Nhóm)
 
-| Tiêu chí | Điểm tự đánh giá |
-|----------|-------------------|
-| Lựa chọn tài liệu (Document Set Quality) | / 10 |
-| Thiết kế chiến lược (Strategy Design) | / 15 |
-| Chất lượng truy xuất (Retrieval Quality) | / 10 |
-| Thuyết trình (Demo) | / 5 |
-| **Tổng phần nhóm** | **/ 40** |
+| Tiêu chí | Điểm tự đánh giá | Căn cứ |
+|----------|-------------------|--------|
+| Lựa chọn tài liệu (Document Set Quality) | **10** / 10 | 7 tài liệu nguồn công khai, chủ đề rõ, đủ 7 trường metadata; `audience` gán có bằng chứng (đếm tần suất + trích văn bản) và tạo được cặp tài liệu cho câu hỏi cần lọc |
+| Thiết kế chiến lược (Strategy Design) | **14** / 15 | Baseline trên 3 tài liệu × 3 chiến lược, cộng bảng so sánh **11 ô** (4 thành viên × 3 chiến lược) đo trên cùng điều kiện. Trừ 1 vì thiếu ô `recursive` của Thành và chưa ai làm chunker theo heading |
+| Chất lượng truy xuất (Retrieval Quality) | **9** / 10 | Điểm cao nhất nhóm 9/10; chấm 2 mức (giao khoảng + chuỗi neo) thay vì chỉ kiểm `doc_id`, có A/B chứng minh filter đổi hẳn tài liệu trả về |
+| Thuyết trình (Demo) | **—** / 5 | Điền sau buổi demo |
+| **Tổng phần nhóm** | **33 / 35** *(chưa tính demo)* | |
