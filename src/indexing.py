@@ -29,6 +29,33 @@ def split_frontmatter(raw: str) -> tuple[dict, str]:
     return metadata, body.lstrip("\n")
 
 
+def locate(body: str, chunk: str, cursor: int) -> tuple[int, int]:
+    """Tìm vị trí của một chunk trong tài liệu gốc, trả về nửa khoảng [start, end).
+
+    Không phải chunker nào cũng trả về chuỗi khớp nguyên văn với tài liệu:
+    SentenceChunker gộp khoảng trắng, còn HeadingChunker **ghép thêm tiêu đề vào
+    đầu** mỗi mảnh con. Vì vậy khớp nguyên văn trước, không được thì dò theo các
+    đoạn đuôi ngắn dần — đuôi mới là phần văn bản thật, phần đầu có thể là tiêu
+    đề được gắn vào từ chỗ khác.
+    """
+    start = body.find(chunk, cursor)
+    if start >= 0:
+        return start, start + len(chunk)
+
+    for length in (240, 120, 60, 30):
+        if len(chunk) <= length:
+            continue
+        tail = chunk[-length:]
+        position = body.find(tail, cursor)
+        if position >= 0:
+            return position, position + len(tail)
+
+    head = body.find(chunk[:40], cursor)
+    if head >= 0:
+        return head, head + len(chunk)
+    return cursor, cursor + len(chunk)
+
+
 def chunk_corpus(chunker, data_dir: Path = DATA_DIR) -> list[Document]:
     """Chunk toàn corpus. Mỗi chunk thành một Document id = doc_id_start_end."""
     documents: list[Document] = []
@@ -36,14 +63,7 @@ def chunk_corpus(chunker, data_dir: Path = DATA_DIR) -> list[Document]:
         metadata, body = split_frontmatter(path.read_text(encoding="utf-8"))
         cursor = 0
         for chunk in chunker.chunk(body):
-            start = body.find(chunk, cursor)
-            if start < 0:
-                # SentenceChunker gộp khoảng trắng nên chuỗi trả về có thể không
-                # khớp nguyên văn; dò theo 40 ký tự đầu để vẫn lấy được offset.
-                start = body.find(chunk[:40], cursor)
-            if start < 0:
-                start = cursor
-            end = start + len(chunk)
+            start, end = locate(body, chunk, cursor)
             cursor = max(cursor, start + 1)
             documents.append(
                 Document(

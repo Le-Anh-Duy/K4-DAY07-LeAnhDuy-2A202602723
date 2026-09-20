@@ -132,7 +132,7 @@ Chạy **5 câu hỏi đánh giá của nhóm** trên mã nguồn cá nhân củ
 > **Phân tích lỗi — Q2 và Q3 hỏng cùng một kiểu.** Cả hai đều bị chunk *đúng chủ đề nhưng không chứa con số trả lời được* đánh bại chunk có đáp án: cosine đo độ giống chủ đề chứ không đo mật độ thông tin. Q2 còn cho thấy filter chỉ giải quyết được một nửa — lọc `audience=buyer` đã kéo đúng tài liệu 77251 lên top-3, nhưng trong cùng tài liệu thì mục 3.1 (điều kiện trả hàng) vẫn thắng mục 3.2 (thời hạn 15 ngày) vì câu hỏi dùng từ "khiếu nại" hợp với mục 3.1 hơn.
 
 **Điều hay nhất tôi học được từ thành viên khác / nhóm khác (qua demo):**
-> *(điền sau buổi demo)*
+> Chúng ta không nên chunking quá lớn, phải tùy vào dữ liệu, ví dụ với dự liệu hôm nay thì 800 token là quá dài.
 
 ---
 

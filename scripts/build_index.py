@@ -51,6 +51,11 @@ def make_chunker(package: str, strategy: str):
     thêm), nên thử tham số đầy đủ trước rồi lùi về tham số chuẩn của lab.
     """
     chunking = load_chunking_module(package)
+    if strategy == "heading":
+        # Chunker tuỳ chỉnh, chỉ có trong src của Duy — không phải bài nộp chung.
+        from src.chunking import HeadingChunker
+
+        return HeadingChunker(chunk_size=800)
     if strategy == "fixed":
         return chunking.FixedSizeChunker(chunk_size=800, overlap=80)
     if strategy == "recursive":
@@ -61,7 +66,7 @@ def make_chunker(package: str, strategy: str):
         return chunking.SentenceChunker(max_sentences_per_chunk=3)
 
 
-STRATEGIES = ["fixed", "sentence", "recursive"]
+STRATEGIES = ["fixed", "sentence", "recursive", "heading"]
 
 
 def make_embedder(provider: str):

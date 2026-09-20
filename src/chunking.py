@@ -195,6 +195,86 @@ class RecursiveChunker:
         return [c.strip() for c in chunks if c.strip()]
 
 
+class HeadingChunker:
+    """
+    Chunk theo mục của văn bản quy định: cắt trước mỗi dòng tiêu đề, mỗi mục
+    thành một chunk, mục nào dài quá thì hạ xuống RecursiveChunker.
+
+    Người soạn văn bản đã chia sẵn nội dung thành các mục có nghĩa trọn vẹn
+    ("A. PHẠM VI VÀ ĐỐI TƯỢNG ÁP DỤNG", "3. ĐIỀU KIỆN YÊU CẦU TRẢ HÀNG"), nên
+    bám theo đó tốt hơn là tự đoán ranh giới.
+
+    Chi tiết quan trọng nhất: khi phải cắt nhỏ một mục dài, **gắn lại tiêu đề
+    vào từng mảnh con**. Không có nó, mảnh thứ hai trở đi mất ngữ cảnh "đây là
+    mục nói về cái gì" — đúng lỗi làm cả ba bản RecursiveChunker của nhóm trượt
+    câu Q3: chúng cắt ngay sau câu chủ đề nên chunk chứa danh sách không còn
+    câu nói nó là danh sách của cái gì.
+
+    Corpus Shopee do crawler bê từ web nên hầu như không có `#` của Markdown;
+    tiêu đề thật nằm ở dạng dòng viết hoa hoặc mục đánh số ngắn.
+    """
+
+    MAX_HEADING_LENGTH = 90
+
+    _MARKDOWN = re.compile(r"^#{1,6}\s+\S")
+    # "A. ...", "1. ...", "2.1 ...", "IV. ..." — đứng đầu dòng, theo sau là chữ.
+    _NUMBERED = re.compile(r"^(?:[A-ZĐ]|[IVX]{1,4}|\d+(?:\.\d+)*)[.)]\s+\S")
+
+    def __init__(self, chunk_size: int = 800, min_chunk_size: int = 80) -> None:
+        self.chunk_size = chunk_size
+        self.min_chunk_size = min_chunk_size
+
+    def is_heading(self, line: str) -> bool:
+        text = line.strip()
+        if not text or len(text) > self.MAX_HEADING_LENGTH:
+            return False
+        if self._MARKDOWN.match(text):
+            return True
+        # Dòng viết hoa toàn bộ: "CHÍNH SÁCH VẬN CHUYỂN SHOPEE"
+        letters = [c for c in text if c.isalpha()]
+        if len(letters) >= 8 and text == text.upper():
+            return True
+        return bool(self._NUMBERED.match(text))
+
+    def _sections(self, text: str) -> list[tuple[str, str]]:
+        """Cắt text thành các cặp (tiêu đề, nội dung). Phần trước tiêu đề đầu
+        tiên đi kèm tiêu đề rỗng."""
+        sections: list[tuple[str, list[str]]] = [("", [])]
+        for line in text.splitlines():
+            if self.is_heading(line):
+                sections.append((line.strip(), []))
+            else:
+                sections[-1][1].append(line)
+        return [(head, "\n".join(body).strip()) for head, body in sections]
+
+    def chunk(self, text: str) -> list[str]:
+        if not text.strip():
+            return []
+
+        chunks: list[str] = []
+        for heading, body in self._sections(text):
+            section = f"{heading}\n\n{body}".strip() if heading else body
+            if not section:
+                continue
+            if len(section) <= self.chunk_size:
+                chunks.append(section)
+                continue
+            # Mục quá dài: cắt phần thân rồi GẮN LẠI tiêu đề vào từng mảnh.
+            budget = self.chunk_size - len(heading) - 2 if heading else self.chunk_size
+            pieces = RecursiveChunker(chunk_size=max(budget, 100)).chunk(body)
+            chunks.extend(f"{heading}\n\n{piece}".strip() if heading else piece
+                          for piece in pieces)
+
+        # Tiêu đề đứng một mình (mục rỗng) thì nhập vào chunk kế tiếp.
+        merged: list[str] = []
+        for chunk in chunks:
+            if merged and len(merged[-1]) < self.min_chunk_size:
+                merged[-1] = f"{merged[-1]}\n\n{chunk}"
+            else:
+                merged.append(chunk)
+        return merged
+
+
 def _dot(a: list[float], b: list[float]) -> float:
     return sum(x * y for x, y in zip(a, b))
 
