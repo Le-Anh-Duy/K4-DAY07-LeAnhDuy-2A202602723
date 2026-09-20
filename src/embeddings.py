@@ -4,9 +4,10 @@ import hashlib
 import math
 import os
 
-# Multilingual model suitable for the Vietnamese corpora used in this Lab.
+# Vietnamese bi-encoder (PhoBERT-base, 768 dim) trained for asymmetric retrieval
+# — a better fit than a paraphrase/STS model for short query -> long policy chunk.
 # The local backend remains optional; required checkpoints use MockEmbedder.
-LOCAL_EMBEDDING_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+LOCAL_EMBEDDING_MODEL = "bkai-foundation-models/vietnamese-bi-encoder"
 OPENAI_EMBEDDING_MODEL = "text-embedding-3-small"
 GEMINI_EMBEDDING_MODEL = "gemini-embedding-001"
 EMBEDDING_PROVIDER_ENV = "EMBEDDING_PROVIDER"
@@ -39,8 +40,17 @@ class LocalEmbedder:
         self.model_name = model_name
         self._backend_name = model_name
         self.model = SentenceTransformer(model_name)
+        # PhoBERT was pretrained on word-segmented Vietnamese; skip this and
+        # "trả hàng" is read as two unrelated tokens. Not needed for non-PhoBERT models.
+        self._segment = None
+        if "phobert" in model_name.lower() or "vietnamese-bi-encoder" in model_name.lower():
+            from pyvi import ViTokenizer
+
+            self._segment = ViTokenizer.tokenize
 
     def __call__(self, text: str) -> list[float]:
+        if self._segment is not None:
+            text = self._segment(text)
         embedding = self.model.encode(text, normalize_embeddings=True)
         if hasattr(embedding, "tolist"):
             return embedding.tolist()
