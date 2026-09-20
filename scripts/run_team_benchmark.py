@@ -28,7 +28,8 @@ from bench import GOLD_PATH, make_query_embedder, score_query
 from src.indexing import INDEX_ROOT, PrecomputedEmbedder, load_chunks, load_vectors
 from src.store import EmbeddingStore
 
-STRATEGIES = ["fixed", "sentence", "recursive"]
+# "heading" là chunker tuỳ chỉnh, chỉ Duy viết — người khác sẽ hiện "chưa dựng index".
+STRATEGIES = ["fixed", "sentence", "recursive", "heading"]
 # Thư mục index → tên hiển thị. `src` là bài của chủ repo, còn lại là bài các bạn nộp.
 MEMBERS = [
     ("Duy", "src"),

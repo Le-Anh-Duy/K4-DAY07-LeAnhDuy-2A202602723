@@ -113,6 +113,7 @@ Chạy `ChunkingStrategyComparator().compare()` trên 2-3 tài liệu:
 | Duy | FixedSize (372 chunk) | 8/10 | Có overlap 80; cửa sổ rộng 800 gom trọn cả câu chủ đề lẫn danh sách | Cắt ngang giữa từ, chunk mở đầu cụt nghĩa |
 | Duy | Sentence (450 chunk) | 7/10 | Có trần `max_chars` chặn chunk 3000 ký tự | Ít điểm tách hơn Duyên nên chunk to, loãng |
 | **Cả 4 người** | Recursive (≈418 chunk) | 6/10 ở cả 4 | Ranh giới đoạn sạch nhất | **Không có overlap**; cắt ngay sau câu chủ đề làm danh sách mất ngữ cảnh |
+| Duy | **Heading (498 chunk, tự viết)** | **5/10** | Câu duy nhất khiến Q3 lên 2/2 nhờ gắn lại tiêu đề vào mọi mảnh con | **Thấp nhất bảng**: 81% chunk dùng chung phần mở đầu, có tiêu đề lặp 16 lần → embedding bị kéo lại gần nhau, loãng tín hiệu riêng |
 | Thành | Sentence (605 chunk, đã sửa) | 6/10 | Sau khi thêm lookbehind thì dấu câu được giữ, Q2 lên 1 điểm | Vẫn thiếu nhánh tách ở xuống dòng như Duyên nên kém 3 điểm; Q1 vẫn 0/2 |
 | Cả 4 người | FixedSize | 8/10 ở cả 4 | — | Lab cho sẵn nên chunk giống hệt nhau từng ký tự |
 
@@ -178,7 +179,7 @@ Chạy `ChunkingStrategyComparator().compare()` trên 2-3 tài liệu:
 | Tiêu chí | Điểm tự đánh giá | Căn cứ |
 |----------|-------------------|--------|
 | Lựa chọn tài liệu (Document Set Quality) | **10** / 10 | 7 tài liệu nguồn công khai, chủ đề rõ, đủ 7 trường metadata; `audience` gán có bằng chứng (đếm tần suất + trích văn bản) và tạo được cặp tài liệu cho câu hỏi cần lọc |
-| Thiết kế chiến lược (Strategy Design) | **15** / 15 | Baseline trên 3 tài liệu × 3 chiến lược, cộng bảng so sánh **đủ 12 ô** (4 thành viên × 3 chiến lược) đo trên cùng điều kiện, cộng `HeadingChunker` tự viết. Đã sửa 2 lỗi trong bản của Thành theo yêu cầu nên ô `recursive` của bạn ấy cũng chạy được |
+| Thiết kế chiến lược (Strategy Design) | **15** / 15 | Baseline 3 tài liệu × 3 chiến lược, bảng so sánh **13 ô** (4 thành viên × 3 chiến lược + `HeadingChunker` tự viết) đo trên cùng điều kiện. `HeadingChunker` tuy chỉ đạt 5/10 nhưng cho ra kết luận đáng giá nhất: chữa đúng failure case vẫn có thể làm tổng thể tệ đi |
 | Chất lượng truy xuất (Retrieval Quality) | **9** / 10 | Điểm cao nhất nhóm 9/10; chấm 2 mức (giao khoảng + chuỗi neo) thay vì chỉ kiểm `doc_id`, có A/B chứng minh filter đổi hẳn tài liệu trả về |
 | Thuyết trình (Demo) | **—** / 5 | Điền sau buổi demo |
 | **Tổng phần nhóm** | **34 / 35** *(chưa tính demo)* | |

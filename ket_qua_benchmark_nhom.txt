@@ -8,14 +8,18 @@ Người   Chiến lược   chunk  dài TB   Q1   Q2   Q3   Q4   Q5    Tổng
 Duy     fixed          372     793    2    0    2    2    2     8/10
 Duy     sentence       450     585    2    1    0    2    2     7/10
 Duy     recursive      419     632    2    0    0    2    2     6/10
+Duy     heading        498     559    1    0    2    1    1     5/10
 Duyên   fixed          372     793    2    0    2    2    2     8/10
 Duyên   sentence       573     461    2    2    2    2    1     9/10
 Duyên   recursive      418     633    2    0    0    2    2     6/10
+Duyên   heading          —       —   chưa dựng index
 Khang   fixed          372     793    2    0    2    2    2     8/10
 Khang   sentence       579     456    2    1    2    2    1     8/10
 Khang   recursive      418     633    2    0    0    2    2     6/10
+Khang   heading          —       —   chưa dựng index
 Thành   fixed          372     793    2    0    2    2    2     8/10
 Thành   sentence       616     428    0    1    2    2    1     6/10
 Thành   recursive      419     632    2    0    0    2    2     6/10
+Thành   heading          —       —   chưa dựng index
 
 Cao nhất: Duyên / sentence = 9/10
