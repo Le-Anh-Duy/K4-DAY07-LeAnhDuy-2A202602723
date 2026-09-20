@@ -1,6 +1,7 @@
 BENCHMARK TRUY XUẤT — Nhóm ColdBrew, corpus Shopee (7 tài liệu)
-Backend: gemini-embedding-001, 768 chiều, task_type RETRIEVAL_DOCUMENT/QUERY
+Backend: gemini-embedding-001, 768 chiều, RETRIEVAL_DOCUMENT / RETRIEVAL_QUERY
 Chấm 2 mức: giao khoảng vùng gold + ngữ cảnh phải chứa chuỗi neo
+Cùng corpus, cùng câu hỏi, cùng store — chỉ đổi code chunking
 
 Người   Chiến lược   chunk  dài TB   Q1   Q2   Q3   Q4   Q5    Tổng
 ----------------------------------------------------------------------
@@ -14,10 +15,13 @@ Khang   fixed          372     793    2    0    2    2    2     8/10
 Khang   sentence       579     456    2    1    2    2    1     8/10
 Khang   recursive      418     633    2    0    0    2    2     6/10
 Thành   fixed          372     793    2    0    2    2    2     8/10
-Thành   sentence       616     425    0    0    2    2    1     5/10
-Thành   recursive        —       —   chưa chạy (chunk quá nhiều, xem ghi chú)
-
-Ghi chú: Thành / recursive = 1820 chunk (thiếu bước gom mảnh liền kề),
-gấp 4 lần người khác nên không embed; con số đã đủ nói lên vấn đề.
+Thành   sentence       616     428    0    1    2    2    1     6/10
+Thành   recursive      419     632    2    0    0    2    2     6/10
 
 Cao nhất: Duyên / sentence = 9/10
+
+Ghi chú: bản đầu của Thành có 2 lỗi, đã sửa theo yêu cầu của bạn ấy —
+  SentenceChunker: re.split('[.!?]\s+') nuốt mất dấu câu -> thêm lookbehind
+     616 chunk câu cụt -> 605 chunk trọn vẹn, điểm 5/10 -> 6/10 (Q2: 0 -> 1)
+  RecursiveChunker: thiếu bước gom mảnh liền kề -> thêm buffer
+     1820 chunk vụn -> 414 chunk, trùng khít bản của 3 người còn lại, 6/10

@@ -97,7 +97,9 @@ Chạy `ChunkingStrategyComparator().compare()` trên 2-3 tài liệu:
 **Thành viên 4 — Lê Quang Thành**
 - **Loại chiến lược:** Sentence → 616 chunk, dài TB 425
 - **Mô tả & lý do chọn:** Dùng `re.split` với mẫu `[.!?]\s+` — cách trực tiếp nhất, nhưng **dấu câu bị nuốt mất** vì `re.split` không có capture group, nên mọi chunk kết thúc bằng câu cụt.
-- **Code snippet:** `src/team_chunking/thanh-chunking.py`. `RecursiveChunker` của Thành sinh **1820 chunk** (gấp 4 lần người khác) do thiếu bước gom mảnh liền kề — không embed vì quá tốn, nhưng con số này chính là bằng chứng cho lỗi "chunk vụn".
+- **Code snippet:** `src/team_chunking/thanh-chunking.py` (bản gốc giữ tại `.bak`). Bản đầu có **2 lỗi**, Thành nhờ sửa rồi chạy lại:
+  1. `re.split(r'[.!?]\s+')` **nuốt mất dấu câu** vì phần khớp bị loại bỏ → thêm lookbehind. Kết quả: 616 chunk câu cụt → 605 chunk trọn vẹn, **5/10 → 6/10** (Q2 từ 0 lên 1 điểm).
+  2. `RecursiveChunker._split` **thiếu bước gom mảnh liền kề** → sinh 1820 chunk vụn. Thêm `buffer` gom tới sát `chunk_size`: **1820 → 414 chunk**, và chunk trùng khít với bản của 3 người còn lại (0 lần gọi API vì cache trúng hết) — bằng chứng rằng bản sửa đã đúng.
 
 ### So Sánh Giữa Các Thành Viên
 
@@ -110,12 +112,12 @@ Chạy `ChunkingStrategyComparator().compare()` trên 2-3 tài liệu:
 | Khang | Sentence (579 chunk) | 8/10 | Gần Duyên, giữ được dấu câu | Kém Duyên 1 điểm ở Q2 |
 | Duy | FixedSize (372 chunk) | 8/10 | Có overlap 80; cửa sổ rộng 800 gom trọn cả câu chủ đề lẫn danh sách | Cắt ngang giữa từ, chunk mở đầu cụt nghĩa |
 | Duy | Sentence (450 chunk) | 7/10 | Có trần `max_chars` chặn chunk 3000 ký tự | Ít điểm tách hơn Duyên nên chunk to, loãng |
-| Duy / Duyên / Khang | Recursive (≈418 chunk) | 6/10 | Ranh giới đoạn sạch nhất | **Không có overlap**; cắt ngay sau câu chủ đề làm danh sách mất ngữ cảnh |
-| Thành | Sentence (616 chunk) | 5/10 | Nhiều điểm tách nhất | `re.split(r'[.!?]\s+')` **nuốt mất dấu câu**, chunk toàn câu cụt |
+| **Cả 4 người** | Recursive (≈418 chunk) | 6/10 ở cả 4 | Ranh giới đoạn sạch nhất | **Không có overlap**; cắt ngay sau câu chủ đề làm danh sách mất ngữ cảnh |
+| Thành | Sentence (605 chunk, đã sửa) | 6/10 | Sau khi thêm lookbehind thì dấu câu được giữ, Q2 lên 1 điểm | Vẫn thiếu nhánh tách ở xuống dòng như Duyên nên kém 3 điểm; Q1 vẫn 0/2 |
 | Cả 4 người | FixedSize | 8/10 ở cả 4 | — | Lab cho sẵn nên chunk giống hệt nhau từng ký tự |
 
 **Chiến lược nào tốt nhất cho chủ đề này? Tại sao?**
-> **Sentence bản của Duyên (9/10)**, nhưng bài học không nằm ở tên chiến lược mà ở chỗ **ranh giới rơi vào đâu**: ba bản `recursive` viết độc lập đều cho đúng 6/10, trong khi bốn bản `sentence` trải từ 5 đến 9 — khác biệt là do implementation chứ không do thuật toán. Điều bất ngờ nhất là `FixedSize` cắt cứng giữa từ lại được 8/10, hơn cả `recursive` "cắt đúng ngữ nghĩa": ở Q3, `recursive` cắt ngay **sau** câu chủ đề "…yêu cầu trả hàng/hoàn tiền trong các trường hợp sau:" nên chunk chứa danh sách mất luôn câu nói nó là danh sách của cái gì, còn cửa sổ 800 ký tự của `FixedSize` tình cờ gom được cả hai. Nói cách khác, **cắt đúng ranh giới ngữ nghĩa mà tách tiêu đề khỏi nội dung nó giới thiệu thì vẫn là cắt sai** — đây chính là lý do chunker theo heading bắt buộc phải gắn lại tiêu đề vào từng mảnh con.
+> **Sentence bản của Duyên (9/10)**, nhưng bài học không nằm ở tên chiến lược mà ở chỗ **ranh giới rơi vào đâu**: sau khi sửa lỗi cho Thành, **cả bốn bản `recursive` đều cho đúng 6/10 và sinh ra gần như cùng một tập chunk**, trong khi bốn bản `sentence` trải từ 6 đến 9 — khác biệt là do implementation chứ không do thuật toán. Điều bất ngờ nhất là `FixedSize` cắt cứng giữa từ lại được 8/10, hơn cả `recursive` "cắt đúng ngữ nghĩa": ở Q3, `recursive` cắt ngay **sau** câu chủ đề "…yêu cầu trả hàng/hoàn tiền trong các trường hợp sau:" nên chunk chứa danh sách mất luôn câu nói nó là danh sách của cái gì, còn cửa sổ 800 ký tự của `FixedSize` tình cờ gom được cả hai. Nói cách khác, **cắt đúng ranh giới ngữ nghĩa mà tách tiêu đề khỏi nội dung nó giới thiệu thì vẫn là cắt sai** — đây chính là lý do chunker theo heading bắt buộc phải gắn lại tiêu đề vào từng mảnh con.
 
 ---
 
@@ -164,7 +166,7 @@ Chạy `ChunkingStrategyComparator().compare()` trên 2-3 tài liệu:
 > 1) **Cắt "đúng ngữ nghĩa" vẫn có thể là cắt sai**: cả 3 bản `recursive` đều 0/2 ở Q3 vì cắt ngay sau câu chủ đề, tách danh sách khỏi câu giới thiệu nó; `FixedSize` cắt cứng giữa từ lại được 2/2 nhờ cửa sổ rộng gom được cả hai. 2) **Cosine tuyệt đối vô nghĩa**: hai câu không liên quan (phí vận chuyển vs thời tiết) vẫn đạt 0.655 trong khi top-1 đúng chỉ 0.797 — chênh 0.14, không thể đặt ngưỡng, chỉ dùng được thứ hạng. 3) **Cùng tên chiến lược, khác người viết, khác 4 điểm**: `sentence` trải từ 5/10 đến 9/10 chỉ vì khác regex tách câu.
 
 **Bài học rút ra khi so sánh trong nhóm:**
-> `fixed` cho **kết quả giống hệt nhau ở cả 4 người** (8/10) vì lab cho sẵn — nó là mốc đối chứng chứng minh mọi chênh lệch còn lại đến từ code chứ không từ dữ liệu hay cách chấm. Ba bản `recursive` viết độc lập cũng hội tụ về đúng 6/10, trong khi bốn bản `sentence` trải từ 5 đến 9 — tức **ở chiến lược này cách viết quan trọng hơn thuật toán**, còn ở `recursive` thì ngược lại.
+> `fixed` cho **kết quả giống hệt nhau ở cả 4 người** (8/10) vì lab cho sẵn — nó là mốc đối chứng chứng minh mọi chênh lệch còn lại đến từ code chứ không từ dữ liệu hay cách chấm. Bốn bản `recursive` viết độc lập cũng hội tụ về đúng 6/10 với gần như cùng tập chunk, trong khi bốn bản `sentence` trải từ 6 đến 9 — tức **ở `sentence` cách viết quan trọng hơn thuật toán**, còn ở `recursive` thì thuật toán quyết định. Đáng chú ý: sửa lỗi cho Thành chỉ nâng `sentence` được 1 điểm (5→6), cho thấy **giữ được dấu câu là điều kiện cần nhưng chưa đủ** — thứ tạo ra 3 điểm chênh với Duyên là nhánh tách thêm ở vị trí xuống dòng.
 
 **Nếu làm lại, nhóm sẽ thay đổi gì trong chiến lược dữ liệu (data strategy)?**
 > Thêm **overlap cho `recursive`** (hiện bằng 0) để điều khoản nằm sát ranh giới vẫn xuất hiện trọn trong ít nhất một chunk — đây là nguyên nhân trực tiếp của hai câu hỏng. Bổ sung metadata **cấp mục** (`section`, `clause_no`) chứ không chỉ cấp tài liệu, để lọc được tới đúng điều khoản thay vì chỉ tới đúng file; và khử trùng lặp `77245` với các tài liệu nó chép lại, vì hiện một nội dung tồn tại hai bản làm loãng bảng xếp hạng.

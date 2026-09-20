@@ -52,10 +52,7 @@ class SentenceChunker:
         if not text or not text.strip():
             return []
         
-        # FIX: them lookbehind (?<=...) de GIU LAI dau cau.
-        # Ban cu re.split(r'[.!?]\s+') nuot mat dau cau vi phan khop bi loai bo,
-        # nen moi chunk ket thuc bang cau cut -> diem retrieval tut.
-        sentences = re.split(r'(?<=[.!?])\s+', text)
+        sentences = re.split(r'[.!?]\s+', text)
         chunks = []
         for i in range(0, len(sentences), self.max_sentences_per_chunk):
             chunk = ' '.join(sentences[i:i + self.max_sentences_per_chunk]).strip()
@@ -101,29 +98,9 @@ class RecursiveChunker:
         separator = remaining_separators[0]
         parts = current_text.split(separator)
         chunks = []
-
-        # FIX: them buoc GOM cac manh nho lien ke lai cho toi sat chunk_size.
-        # Ban cu de quy thang xuong tung part roi extend, khong noi lai, nen mot
-        # file nhieu dong ngan sinh ra hang nghin chunk vun (1820 chunk tren
-        # corpus Shopee, gap 4 lan cac ban khac).
-        buffer = ""
         for part in parts:
-            candidate = part if not buffer else buffer + separator + part
-            if len(candidate) <= self.chunk_size:
-                buffer = candidate
-                continue
-            if len(part) > self.chunk_size:
-                # Van qua dai: ha xuong separator nho hon, mang theo ca buffer
-                # de dau muc ("m.", "i.") khong bi tach roi khoi noi dung cua no.
-                chunks.extend(self._split(candidate, remaining_separators[1:]))
-                buffer = ""
-            else:
-                if buffer:
-                    chunks.append(buffer)
-                buffer = part
-        if buffer:
-            chunks.append(buffer)
-        return [c.strip() for c in chunks if c.strip()]
+            chunks.extend(self._split(part, remaining_separators[1:]))
+        return chunks
 
 
 def _dot(a: list[float], b: list[float]) -> float:

@@ -4,7 +4,9 @@ Duy đã chạy benchmark giúp cả nhóm (mình có API key Gemini). File này
 liệu của riêng bạn** để dán vào báo cáo cá nhân, cộng phần dữ kiện chung mà cả
 nhóm phải khớp nhau.
 
-Code chunking là **của chính bạn** — mình chỉ chạy, không sửa một dòng nào.
+Code chunking là **của chính bạn**, mình chỉ chạy. Ngoại lệ duy nhất: Thành có
+nhờ sửa 2 lỗi nên mình đã chữa — chi tiết ở mục 2, bản gốc vẫn giữ nguyên trong
+file `.bak`. Code của Khang và Duyên không đụng một dòng nào.
 
 ---
 
@@ -58,24 +60,38 @@ Chiến lược khác của bạn: `fixed` 8/10 · `recursive` 6/10.
 Chiến lược khác của bạn: `fixed` 8/10 · `recursive` 6/10.
 Bạn là người **duy nhất** ăn trọn 2/2 ở Q2 — câu khó nhất, 8/11 ô còn lại được 0 điểm.
 
-### Lê Quang Thành — `SentenceChunker`, 616 chunk, dài TB 425 → **5/10**
+### Lê Quang Thành — `SentenceChunker`, 605 chunk (sau khi sửa) → **6/10**
 
-| # | Câu hỏi | Top-1 chunk | Score | Liên quan? | Điểm |
-|---|---|---|---|---|---|
-| Q1 | Shopee Mall gửi trả trong bao nhiêu ngày | `77262_1809_2431` | 0.822 | Không | 0/2 |
-| Q2 | Hàng hư hại khiếu nại bao nhiêu ngày *(lọc `audience=buyer`)* | `77251_2142_3079` | 0.696 | Không | 0/2 |
-| Q3 | Trường hợp nào được trả hàng/hoàn tiền | `77251_2142_3079` | 0.792 | Có | 2/2 |
-| Q4 | Quy trình tranh chấp mấy bước | `77245_14802_15467` | 0.821 | Có | 2/2 |
-| Q5 | Nội dung cấm đăng bán | `77245_51935_52319` | 0.818 | Có | 1/2 |
+Bạn nhờ sửa nên mình đã chữa **2 lỗi** rồi chạy lại. Bản gốc của bạn vẫn giữ
+nguyên ở `src/team_chunking/thanh-chunking.py.bak` để đối chiếu, và chỗ sửa
+nào cũng có comment `# FIX:` ghi rõ lý do.
 
-Chiến lược khác của bạn: `fixed` 8/10 · `recursive` **chưa chạy**.
+**Lỗi 1 — `SentenceChunker` nuốt mất dấu câu.** `re.split(r'[.!?]\s+')` loại
+bỏ luôn phần khớp, nên mọi chunk kết thúc bằng câu cụt. Thêm lookbehind
+`(?<=[.!?])\s+` là giữ lại được. Kết quả: **5/10 → 6/10** (Q2 từ 0 lên 1 điểm).
 
-`RecursiveChunker` của bạn sinh **1820 chunk** — gấp hơn 4 lần của người khác
-(≈418). Nguyên nhân: `_split` đệ quy xuống nhưng **không gom các mảnh nhỏ liền
-kề lại**, nên sinh ra hàng nghìn chunk vụn. Embed 1820 chunk vượt hạn mức free
-tier nên mình dừng lại — nhưng con số này nên đưa vào báo cáo, nó đúng là dòng
-*"Chunk vụn 5–10 ký tự → RecursiveChunker thiếu bước gom"* trong bảng lỗi
-thường gặp của lab.
+**Lỗi 2 — `RecursiveChunker` thiếu bước gom mảnh.** `_split` đệ quy xuống từng
+`part` rồi `extend` thẳng, không nối các mảnh nhỏ liền kề lại, nên sinh
+**1820 chunk vụn** (gấp 4 lần người khác). Thêm `buffer` gom tới sát
+`chunk_size`: **1820 → 414 chunk**. Điều đáng chú ý là sau khi sửa, chunk của
+bạn **trùng khít với bản của 3 người còn lại** — build index tốn đúng 0 lần
+gọi API vì cache trúng hết. Đó là bằng chứng bản sửa đã đúng.
+
+| # | Câu hỏi | Điểm |
+|---|---|---|
+| Q1 | Shopee Mall gửi trả trong bao nhiêu ngày | 0/2 |
+| Q2 | Hàng hư hại khiếu nại bao nhiêu ngày *(lọc `audience=buyer`)* | 1/2 |
+| Q3 | Trường hợp nào được trả hàng/hoàn tiền | 2/2 |
+| Q4 | Quy trình tranh chấp mấy bước | 2/2 |
+| Q5 | Nội dung cấm đăng bán | 1/2 |
+
+Chiến lược khác của bạn: `fixed` 8/10 · `recursive` 6/10 (sau khi sửa).
+
+**Điều đáng viết vào báo cáo:** sửa lỗi dấu câu chỉ nâng được 1 điểm (5→6),
+trong khi Duyên đạt 9/10. Chênh lệch 3 điểm còn lại đến từ chỗ bản của Duyên
+có thêm nhánh **tách ở vị trí xuống dòng sau dấu chấm** — tức giữ dấu câu là
+điều kiện cần nhưng chưa đủ. Nêu được cả lỗi lẫn giới hạn của bản sửa sẽ được
+đánh giá cao hơn là chỉ báo điểm.
 
 ---
 
@@ -157,9 +173,10 @@ kèm metadata, đọc bằng mắt được. Định danh chunk là `{doc_id}_{s
 1. **`fixed` cho đúng 8/10 ở cả 4 người** — vì lab cho sẵn nên chunk giống hệt
    nhau từng ký tự. Nó thành mốc đối chứng: mọi chênh lệch còn lại đến từ code
    chứ không từ dữ liệu hay cách chấm.
-2. **Ba bản `recursive` viết độc lập đều ra đúng 6/10**, trong khi bốn bản
-   `sentence` trải từ 5 tới 9 điểm. Ở `sentence` thì cách viết quan trọng hơn
-   thuật toán; ở `recursive` thì ngược lại.
+2. **Cả bốn bản `recursive` đều ra đúng 6/10** và sinh gần như cùng một tập
+   chunk (≈418), trong khi bốn bản `sentence` trải từ 6 tới 9 điểm. Ở
+   `sentence` thì cách viết quan trọng hơn thuật toán; ở `recursive` thì thuật
+   toán quyết định, viết kiểu gì cũng về cùng kết quả.
 3. **Cắt "đúng ngữ nghĩa" vẫn có thể là cắt sai.** Ở Q3, cả ba bản `recursive`
    đều 0/2 vì cắt ngay **sau** câu chủ đề *"…yêu cầu trả hàng/hoàn tiền trong
    các trường hợp sau:"* — chunk chứa danh sách mất luôn câu nói nó là danh
