@@ -142,10 +142,14 @@ Nếu bạn có API key Gemini (`aistudio.google.com/apikey` — free, không c�
 
 ```bash
 python scripts/build_index.py --strategy sentence --provider gemini
-python bench.py               --strategy sentence --provider gemini
+python bench.py --strategy sentence --provider gemini > ket_qua_benchmark.txt
 ```
 
 Đổi `--strategy` thành `fixed` hoặc `recursive` để thử chiến lược khác.
+
+`ket_qua_benchmark.txt` là **artifact cá nhân** CP6 bắt nộp — mỗi người một
+bản, chứa chi tiết top-3 từng câu của riêng mình. Bảng so cả nhóm là artifact
+riêng, sinh bởi `scripts/run_team_benchmark.py` → `ket_qua_benchmark_nhom.txt`.
 
 Vài điều đã va phải, nói trước để đỡ mất thời gian:
 

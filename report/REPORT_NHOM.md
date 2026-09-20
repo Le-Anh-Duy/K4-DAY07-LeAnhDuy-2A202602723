@@ -103,7 +103,7 @@ Chạy `ChunkingStrategyComparator().compare()` trên 2-3 tài liệu:
 
 ### So Sánh Giữa Các Thành Viên
 
-> Mọi ô chạy trên **cùng corpus, cùng 5 câu hỏi, cùng store, cùng backend** (`gemini-embedding-001`, 768 chiều) — chỉ đổi đúng một biến là code chunking. Kết quả đầy đủ: `ket_qua_benchmark.txt`.
+> Mọi ô chạy trên **cùng corpus, cùng 5 câu hỏi, cùng store, cùng backend** (`gemini-embedding-001`, 768 chiều) — chỉ đổi đúng một biến là code chunking. Sinh bởi `scripts/run_team_benchmark.py`, kết quả đầy đủ trong `ket_qua_benchmark_nhom.txt`.
 
 | Thành viên | Chiến lược (Strategy) | Điểm truy xuất (/10) | Điểm mạnh | Điểm yếu |
 |-----------|----------|----------------------|-----------|----------|

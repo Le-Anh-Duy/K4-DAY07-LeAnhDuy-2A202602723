@@ -1,7 +1,16 @@
-"""Bước 2 của pipeline: chấm điểm truy xuất trên bộ gold của nhóm ColdBrew.
+"""Bước 2 của pipeline — ARTIFACT CÁ NHÂN (CP6).
 
-    python scripts/build_index.py --strategy recursive    # phải chạy trước
-    python bench.py --strategy recursive
+Chạy 5 câu hỏi của nhóm trên chiến lược của RIÊNG MÌNH, in chi tiết top-3 từng
+câu kèm phần A/B cho câu cần lọc metadata. Kết quả nộp trong
+`ket_qua_benchmark.txt`, bảng top-3 điền vào REPORT_CANHAN mục 5.
+
+    python scripts/build_index.py --strategy recursive --provider gemini
+    python bench.py --strategy recursive --provider gemini > ket_qua_benchmark.txt
+
+Muốn so cả nhóm (bảng "So sánh giữa các thành viên", REPORT_NHOM mục 2) thì
+dùng script riêng, đừng dùng file này:
+
+    python scripts/run_team_benchmark.py --provider gemini
 
 Chỉ nạp index có sẵn — không chunk lại, không embed lại tài liệu. Chỉ câu hỏi
 mới cần gọi API (và cũng đã được cache).

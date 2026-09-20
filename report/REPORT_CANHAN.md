@@ -115,7 +115,7 @@ tests/test_solution.py::TestFixedSizeChunker::test_correct_number_of_chunks_no_o
 
 Chạy **5 câu hỏi đánh giá của nhóm** trên mã nguồn cá nhân của bạn trong gói `src`. **5 câu hỏi này phải trùng với các thành viên cùng nhóm** (xem `REPORT_NHOM.md`).
 
-> Chiến lược của tôi: `RecursiveChunker(chunk_size=800)` → 419 chunk. Backend `gemini-embedding-001` (768 chiều). Output đầy đủ: `ket_qua_benchmark.txt`. `llm_fn` ở bước benchmark là hàm giả nên cột cuối mô tả ngữ cảnh truy xuất được có đủ để trả lời hay không.
+> Chiến lược của tôi: `RecursiveChunker(chunk_size=800)` → 419 chunk. Backend `gemini-embedding-001` (768 chiều). Output đầy đủ: `ket_qua_benchmark.txt` (sinh bởi `python bench.py --strategy recursive`). `llm_fn` ở bước benchmark là hàm giả nên cột cuối mô tả ngữ cảnh truy xuất được có đủ để trả lời hay không.
 
 | # | Câu hỏi (Query) | Top-1 Chunk truy xuất được (tóm tắt) | Điểm Score | Có liên quan không? (Relevant) | Câu trả lời của Agent (tóm tắt) |
 |---|-------|--------------------------------|-------|-----------|------------------------|
@@ -127,7 +127,7 @@ Chạy **5 câu hỏi đánh giá của nhóm** trên mã nguồn cá nhân củ
 
 **Bao nhiêu câu hỏi trả về chunk có liên quan trong top-3?** **3** / 5 — tổng **6/10 điểm** (Q1, Q4, Q5 đạt 2/2; Q2 và Q3 đều 0/2).
 
-> Tôi chạy thêm hai chiến lược còn lại trên cùng code của mình: **`fixed` 8/10** và **`sentence` 7/10**, tức chiến lược tôi chọn (`recursive`) lại là chiến lược **kém nhất** trong ba. Nguyên nhân ở mục phân tích lỗi bên dưới. Bảng đối chiếu 11 ô của cả nhóm nằm ở `REPORT_NHOM.md` mục 2 và `ket_qua_benchmark.txt`.
+> Tôi chạy thêm hai chiến lược còn lại trên cùng code của mình: **`fixed` 8/10** và **`sentence` 7/10**, tức chiến lược tôi chọn (`recursive`) lại là chiến lược **kém nhất** trong ba. Nguyên nhân ở mục phân tích lỗi bên dưới. Bảng đối chiếu 12 ô của cả nhóm nằm ở `REPORT_NHOM.md` mục 2 và `ket_qua_benchmark_nhom.txt`.
 
 > **Phân tích lỗi — Q2 và Q3 hỏng cùng một kiểu.** Cả hai đều bị chunk *đúng chủ đề nhưng không chứa con số trả lời được* đánh bại chunk có đáp án: cosine đo độ giống chủ đề chứ không đo mật độ thông tin. Q2 còn cho thấy filter chỉ giải quyết được một nửa — lọc `audience=buyer` đã kéo đúng tài liệu 77251 lên top-3, nhưng trong cùng tài liệu thì mục 3.1 (điều kiện trả hàng) vẫn thắng mục 3.2 (thời hạn 15 ngày) vì câu hỏi dùng từ "khiếu nại" hợp với mục 3.1 hơn.
 
