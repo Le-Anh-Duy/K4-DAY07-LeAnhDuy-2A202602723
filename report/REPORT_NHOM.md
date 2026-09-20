@@ -17,7 +17,7 @@
 **Chủ đề:** Shopee ecommerce — bộ chính sách & điều khoản công khai trên Shopee Trung tâm trợ giúp (help.shopee.vn/portal/4)
 
 **Tại sao nhóm chọn chủ đề này?**
-> Shopee có lượng người dùng rất lớn nhưng hầu như không ai đọc hết các trang chính sách dài hàng chục nghìn ký tự — đúng kiểu bài toán mà chatbot RAG giải quyết tốt. Tài liệu là nguồn công khai, có cấu trúc rõ (mục A/B/C, điều khoản đánh số), ngôn ngữ tiếng Việt, và các câu trả lời đều kiểm chứng được bằng cách trích đúng điều khoản. Ngoài ra corpus chia tự nhiên theo 2 nhóm người đọc (người mua / người bán), nên có chỗ để thử lọc bằng metadata.
+> Shopee đông người dùng nhưng hầu như không ai đọc hết các trang chính sách dài hàng chục nghìn ký tự — đúng bài toán RAG giải quyết tốt. Tài liệu công khai, có cấu trúc điều khoản đánh số nên đáp án kiểm chứng được, và corpus chia tự nhiên theo người mua / người bán để thử lọc metadata.
 
 ### Danh sách tài liệu (Data Inventory)
 
@@ -31,22 +31,11 @@
 | 6 | Điều Khoản Dịch Vụ của Shopee Mall | https://help.shopee.vn/portal/4/article/77262 | 2026-09-20 / not-stated | 44.897 | doc_id=77262, audience=both |
 | 7 | QUY TRÌNH GIẢI QUYẾT TRANH CHẤP / XỬ LÝ KHIẾU NẠI | https://help.shopee.vn/portal/4/article/77265 | 2026-09-20 / not-stated | 6.737 | doc_id=77265, audience=both |
 
-**Tổng:** 7 tài liệu, ~355.095 ký tự. Manifest đầy đủ: `data/shopee-ecommerce/sources.csv`. Tất cả thu thập bằng `scripts/fetch_public_pages.py`, metadata nằm trong YAML frontmatter của mỗi file `.md`.
-
-**Cách nhóm gán `audience`** — không gán cảm tính mà đếm tần suất "Người Mua" / "Người Bán" trong từng văn bản rồi đọc lại các mục chính:
-
-| Tài liệu | "người mua" / "người bán" | `audience` | Căn cứ |
-|---|---|---|---|
-| 77246 Quy định đăng bán | 10 / 44 | `seller` | Toàn bộ là nghĩa vụ của người bán khi đăng sản phẩm |
-| 77250 Chính sách vận chuyển | 32 / 77 | `seller` | Mục C là quy định đóng gói của người bán; mục D.1.b ghi rõ "dành cho Người Bán" |
-| 77251 Trả hàng & hoàn tiền | 102 / 48 | `buyer` | Quy trình do người mua khởi tạo ("Yêu Cầu Trả Hàng/Hoàn Tiền"); người bán chỉ xuất hiện ở mục 5 |
-| 77243, 77245, 77262, 77265 | cân bằng | `both` | Văn bản tự tuyên bố ràng buộc cả hai phía |
-
-Nhờ vậy corpus có **cặp tài liệu cùng chủ đề "hàng hư hỏng / khiếu nại / bồi thường" nhưng khác đối tượng và khác đáp án** (77250 seller vs 77251 buyer) — đây là cơ sở cho câu hỏi cần `metadata_filter` ở mục 3.
-
 **Danh sách kiểm tra quản trị dữ liệu (Data governance checklist):**
-- [x] Tập tài liệu (Corpus) chỉ chứa nguồn công khai/được phép dùng và không chứa dữ liệu cá nhân, thông tin đăng nhập hoặc tài liệu nội bộ. — Toàn bộ 7 trang lấy từ Trung tâm trợ giúp công khai của Shopee, không cần đăng nhập; cột `license_or_permission` = `public-source`.
-- [x] Mỗi tài liệu có `source_url`, `retrieved_at`, `document_version` (hoặc ngày hiệu lực) trong metadata. — Có đủ trong frontmatter và trong `sources.csv`. Shopee không công bố số phiên bản trên trang, nên `document_version` = `not-stated` và dùng `retrieved_at = 2026-09-20` làm mốc thời điểm.
+- [x] Tập tài liệu (Corpus) chỉ chứa nguồn công khai/được phép dùng và không chứa dữ liệu cá nhân, thông tin đăng nhập hoặc tài liệu nội bộ.
+- [x] Mỗi tài liệu có `source_url`, `retrieved_at`, `document_version` (hoặc ngày hiệu lực) trong metadata.
+
+> 7 trang đều lấy từ Trung tâm trợ giúp công khai, không cần đăng nhập (`license_or_permission = public-source`); Shopee không ghi số phiên bản nên `document_version = not-stated`, dùng `retrieved_at` làm mốc. `audience` gán theo tần suất "Người Mua"/"Người Bán" trong từng văn bản: 77250 = `seller` (mục D.1.b ghi rõ "dành cho Người Bán"), 77251 = `buyer`.
 
 ### Cấu trúc Metadata (Metadata Schema)
 
@@ -125,35 +114,9 @@ Chạy `ChunkingStrategyComparator().compare()` trên 2-3 tài liệu:
 | 4 | Quy trình giải quyết tranh chấp của Shopee gồm mấy bước và Shopee đưa ra hướng giải quyết trong bao lâu? | **4 bước** (Bước 1 người mua tạo khiếu nại trong mục "Đơn Mua" → Bước 2 bộ phận khiếu nại tiếp nhận → Bước 3 xử lý theo Chính sách Trả hàng và Hoàn tiền, với tranh chấp khác thì đưa hướng giải quyết trong **07 ngày làm việc** kể từ khi nhận đủ thông tin/tài liệu → Bước 4 chuyển cơ quan nhà nước có thẩm quyền nếu vượt thẩm quyền của sàn). | `77265_907_2658` — mục 1, Bước 1–4 (bản sao: `77245_14121_15870`) |
 | 5 | Những nội dung nào bị nghiêm cấm đăng bán trên Shopee? | Gồm: nội dung phản động, chống phá, bài xích tôn giáo, khiêu dâm, bạo lực, xâm phạm chủ quyền/an ninh quốc gia; thông tin rác làm mất uy tín dịch vụ Shopee; xúc phạm người khác; tuyên truyền điều pháp luật nghiêm cấm (heroin, thuốc lắc…); quảng cáo sản phẩm độc hại (thuốc lá, rượu, cần sa); văn hóa phẩm đồi trụy; **tài liệu bí mật quốc gia**, bí mật nhà nước, bí mật kinh doanh, bí mật cá nhân; … và các sản phẩm thuộc Danh sách cấm/hạn chế của Shopee. | `77246_1279_2847` — mục 2, điểm a–m (bản sao: `77245_52118_52876`) |
 
-**Chuỗi neo để chấm ở mức nội dung** (theo CP6: không chỉ kiểm `doc_id` trong top-3, mà kiểm ngữ cảnh truy xuất được có thật sự chứa đáp án). `bench.py` khai báo cho mỗi câu một chuỗi bắt buộc xuất hiện:
+> Bộ câu hỏi máy đọc được: `data/shopee-ecommerce/gold.json` (sinh bởi `scripts/make_gold.py`), gồm cả chuỗi neo để chấm ở mức nội dung và `evidence` trích nguyên văn. Chunk định danh bằng `{doc_id}_{start}_{end}` thay vì `file#0` vì chỉ số chunk đổi theo chiến lược, còn offset thì cố định nên cả nhóm dùng chung một vùng gold.
 
-| # | Vùng gold `doc_id_start_end` | Chuỗi neo bắt buộc có trong ngữ cảnh | `metadata_filter` |
-|---|---|---|---|
-| 1 | `77262_2628_3865` | `06 (sáu) ngày lịch` | — |
-| 2 | `77250_14001_14778` | `03 ngày` | `{"audience": "seller"}` |
-| 3 | `77251_2180_3085` | `sai kích cỡ, sai màu sắc` | — |
-| 4 | `77265_907_2658` + `77245_14121_15870` | `trong vòng 07 ngày làm việc kể từ ngày nhận được đầy đủ` | — |
-| 5 | `77246_1279_2847` + `77245_52118_52876` | `bí mật quốc gia` | — |
-
-**File máy đọc được: `data/shopee-ecommerce/gold.json`**, sinh bởi `scripts/make_gold.py`. Mỗi mục gồm `query`, `gold_answer`, `gold_spans`, `gold_chunk_ids`, `anchor`, `metadata_filter` và `evidence` (nguyên văn đoạn văn bản gold). `bench.py` đọc thẳng file này.
-
-**Quy tắc chọn chuỗi neo:** neo chỉ được xuất hiện **bên trong vùng gold, trên toàn corpus** — `scripts/make_gold.py` assert điều này. Nếu neo lọt ra chỗ khác thì một chunk lấy từ đoạn không liên quan vẫn pass phép kiểm nội dung, tức quay về đúng cái bẫy "thổi phồng kết quả" mà CP6 cảnh báo. Ba lần assert này đã bắt lỗi thật khi soạn bộ câu hỏi:
-
-- `hàng giả, hàng nhái` (dự định cho Q3) còn nằm trong 77243 và 77262 → đổi sang `sai kích cỡ, sai màu sắc`
-- `Trả hàng COM` xuất hiện **25 lần** rải khắp 77251 → loại
-- `07 ngày làm việc` và `bí mật quốc gia` cũng có trong 77245 → nới neo Q4 thành cả cụm dài, và thừa nhận 77245 là **vùng gold thứ hai** cho Q4/Q5
-
-**Tài liệu 77245 (Quy chế hoạt động) chép lại nguyên khối nhiều chính sách khác** — quy trình tranh chấp của 77265 và danh mục cấm đăng bán của 77246. Vì vậy Q4 và Q5 có **hai vùng gold**: retrieval trả về bản nào cũng là trả lời đúng, ép chọn một bản sẽ chấm oan.
-
-**Quy ước định danh chunk: `{doc_id}_{start_offset}_{end_offset}`** — offset ký tự tính trên **phần thân** tài liệu (sau khi bỏ YAML frontmatter), nửa khoảng `[start, end)`. `Document.id = f"{doc_id}_{start}_{end}"`, còn `metadata["doc_id"]` vẫn là tên file gốc.
-
-Lý do không dùng `file#0`, `file#1`: chỉ số chunk **đổi theo chiến lược** — chunk số 3 của FixedSize và chunk số 3 của chunker-theo-heading là hai đoạn văn bản hoàn toàn khác nhau, nên không so sánh được giữa các thành viên. Offset thì cố định theo tài liệu, nhờ đó:
-
-- Vùng gold khai báo **một lần cho cả nhóm**, độc lập chiến lược
-- Chấm bằng phép **giao khoảng**: chunk `[s, e)` tính là trúng nếu `s < gold_end` và `e > gold_start` — không cần so khớp chuỗi mờ
-- Nhìn id là biết chunk dài bao nhiêu và nằm ở đâu trong tài liệu, tiện phân tích lỗi ("top-1 lệch 2000 ký tự so với vùng gold")
-
-**Vì sao câu 2 thật sự cần filter:** câu hỏi cố tình **không nêu người hỏi là ai**, trong khi `77250` (audience=`seller`) và `77251` (audience=`buyer`) dùng gần như cùng bộ từ vựng — "hư hại", "vận chuyển", "khiếu nại", "bồi thường" — nhưng **cho ra con số khác nhau** (03/07 ngày so với 15 ngày). Không lọc thì top-3 lẫn cả hai văn bản và agent trả lời sai đối tượng; lọc `audience=seller` thì ra đúng mốc 03/07 ngày. Đây là cặp A/B bắt buộc ở CP6.
+> Câu 2 cần filter vì cố ý không nêu người hỏi là ai: 77250 (`seller`) và 77251 (`buyer`) cùng từ vựng "hư hại / khiếu nại / bồi thường" nhưng khác đáp án (03–07 ngày vs 15 ngày), không lọc thì top-3 lẫn cả hai và agent trả lời sai đối tượng.
 
 ### Tổng hợp chất lượng truy xuất của nhóm
 
