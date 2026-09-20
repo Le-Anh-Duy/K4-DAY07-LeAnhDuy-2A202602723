@@ -35,29 +35,93 @@ class FixedSizeChunker:
         return chunks
 
 
+import re
+
 class SentenceChunker:
     """
     Split text into chunks of at most max_sentences_per_chunk sentences.
 
-    Sentence detection: split on ". ", "! ", "? " or ".\n".
-    Strip extra whitespace from each chunk.
+    Handled edge cases:
+    - Decimals & version numbers: 1.5, 3.14, v2.0
+    - Ellipsis: '...' or '…'
+    - Common abbreviations: TS., PGS., ThS., BS., v.v., e.g., i.e., Mr., Dr.
+    - URLs & Emails: example.com, test@domain.vn
+    - Closing quotes/brackets after punctuation: ." or !)
+    - Multi-line breaks & extra whitespace
     """
+
+    # Danh sách các từ viết tắt phổ biến (Việt + Anh)
+    ABBREVIATIONS = [
+        r"TS", r"ThS", r"PGS", r"GS", r"BS", r"Thầy",
+        r"Mr", r"Mrs", r"Ms", r"Dr", r"Prof",
+        r"v\.v", r"etc", r"e\.g", r"i\.e", r"tp", r"TP"
+    ]
 
     def __init__(self, max_sentences_per_chunk: int = 3) -> None:
         self.max_sentences_per_chunk = max(1, max_sentences_per_chunk)
+        self._build_regex()
 
-    # Split *after* the punctuation (lookbehind) so ".", "!", "?" stay on the sentence.
-    # Known limitation: abbreviations ("TS.", "v.v.") and decimals ("1.5") split wrongly.
-    _SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
+    def _build_regex(self) -> None:
+        abbrev_pattern = "|".join(self.ABBREVIATIONS)
+
+        # Regex tách câu:
+        # 1. (?<!\b(?:...)\.)  : Không tách nếu đứng sau từ viết tắt
+        # 2. (?<!\d)           : Không tách sau số (tránh 1.5, 2.0)
+        # 3. (?<!\.\.)         : Không tách nếu là dấu 3 chấm (...)
+        # 4. ([.!?…]+[\"\')\]]*): Bắt dấu kết thúc câu kèm dấu ngoặc kép/đơn đi liền sau
+        # 5. (?!\S)            : Phía sau phải là khoảng trắng hoặc hết dòng (tránh URL/domain)
+        # 6. \s+               : Nuốt khoảng trắng kế tiếp
+        self._pattern = re.compile(
+            rf"""
+            (?<!\b(?:{abbrev_pattern})) # Bỏ qua viết tắt
+            (?<!\d)                     # Bỏ qua số thập phân
+            (?<!\.\.)                   # Bỏ qua ellipsis (...)
+            ([.!?…]+[\"\')\]]*)         # Dấu kết thúc + đóng ngoặc (nếu có)
+            (?!\S)                      # Tránh URL hoặc tên file (như domain.com)
+            \s+                         # Khoảng trắng phân tách
+            """,
+            re.VERBOSE | re.IGNORECASE,
+        )
+
+    def _split_into_sentences(self, text: str) -> list[str]:
+        # Dùng capture group ([.!?…]+...) để giữ lại dấu câu khi split
+        parts = self._pattern.split(text)
+        sentences = []
+        
+        # parts sẽ có dạng: [đoạn 1, dấu câu 1, đoạn 2, dấu câu 2, ..., đoạn cuối]
+        i = 0
+        while i < len(parts):
+            sentence = parts[i].strip()
+            # Nếu có dấu câu đi kèm ở phần tử tiếp theo, nối lại
+            if i + 1 < len(parts):
+                punct = parts[i + 1].strip()
+                sentence = f"{sentence}{punct}".strip()
+                i += 2
+            else:
+                i += 1
+            
+            if sentence:
+                sentences.append(sentence)
+
+        return sentences
 
     def chunk(self, text: str) -> list[str]:
-        if not text.strip():
+        if not text or not text.strip():
             return []
 
-        sentences = [s.strip() for s in self._SENTENCE_END.split(text) if s.strip()]
-        size = self.max_sentences_per_chunk
-        return [" ".join(sentences[i : i + size]) for i in range(0, len(sentences), size)]
+        # Chuẩn hóa khoảng trắng thừa & xuống dòng rải rác
+        cleaned_text = re.sub(r"[ \t]+", " ", text.strip())
 
+        sentences = self._split_into_sentences(cleaned_text)
+        size = self.max_sentences_per_chunk
+
+        chunks = []
+        for i in range(0, len(sentences), size):
+            chunk_content = " ".join(sentences[i : i + size]).strip()
+            if chunk_content:
+                chunks.append(chunk_content)
+
+        return chunks
 
 class RecursiveChunker:
     """

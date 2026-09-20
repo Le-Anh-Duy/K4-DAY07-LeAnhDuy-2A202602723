@@ -120,10 +120,10 @@ Chạy `ChunkingStrategyComparator().compare()` trên 2-3 tài liệu:
 | # | Câu hỏi (Query) | Câu trả lời chuẩn (Gold Answer) | Chunk nào chứa thông tin? |
 |---|-------|-------------------------------|--------------------------|
 | 1 | Mua hàng trên Shopee Mall, sau khi yêu cầu trả hàng được chấp thuận thì phải gửi trả sản phẩm trong bao nhiêu ngày? | **06 ngày lịch** kể từ ngày yêu cầu trả hàng/hoàn tiền được chấp thuận; phải đóng gói trong bao bì ban đầu và dán kèm Phiếu Trả Hàng. | `77262_2628_3865` — mục 1.2 |
-| 2 | Hàng bị hư hại trong quá trình vận chuyển thì phải khiếu nại trong vòng bao nhiêu ngày? *(câu cần lọc metadata)* | Tùy đối tượng: **Người Bán** — hàng bị hư hại/không nguyên vẹn khi hoàn trả: **03 ngày**, hàng thất lạc khi hoàn trả: **07 ngày**, tính từ khi đơn cập nhật trạng thái chuyển hoàn thành công. **Người Mua** — gửi yêu cầu Trả hàng/Hoàn tiền trong **15 ngày** kể từ khi giao hàng thành công. | `77250_14001_14778` — mục D.1.b (seller) **vs** `77251_2282_2520` — mục 3.2 (buyer) |
-| 3 | Người mua được yêu cầu trả hàng/hoàn tiền trong những trường hợp nào? | 7 trường hợp: không nhận được hàng / không nhận đủ hàng / nhận phải **hàng giả, hàng nhái**; sản phẩm lỗi hoặc hư hại khi vận chuyển; người bán giao sai sản phẩm; hàng khác biệt rõ rệt so với mô tả; sản phẩm hết hạn sử dụng; người bán tự thỏa thuận đồng ý cho trả hàng; hàng còn nguyên vẹn nguyên bao bì nhưng người mua không còn nhu cầu (**Trả hàng COM**). | `77251_2282_2520` — mục 3.1 |
-| 4 | Quy trình giải quyết tranh chấp của Shopee gồm mấy bước và Shopee đưa ra hướng giải quyết trong bao lâu? | **4 bước** (Bước 1 người mua tạo khiếu nại trong mục "Đơn Mua" → Bước 2 bộ phận khiếu nại tiếp nhận → Bước 3 xử lý theo Chính sách Trả hàng và Hoàn tiền, với tranh chấp khác thì đưa hướng giải quyết trong **07 ngày làm việc** kể từ khi nhận đủ thông tin/tài liệu → Bước 4 chuyển cơ quan nhà nước có thẩm quyền nếu vượt thẩm quyền của sàn). | `77265_1490_2033` — mục 1, Bước 3 |
-| 5 | Những nội dung nào bị nghiêm cấm đăng bán trên Shopee? | Gồm: nội dung phản động, chống phá, bài xích tôn giáo, khiêu dâm, bạo lực, xâm phạm chủ quyền/an ninh quốc gia; thông tin rác làm mất uy tín dịch vụ Shopee; xúc phạm người khác; tuyên truyền điều pháp luật nghiêm cấm (heroin, thuốc lắc…); quảng cáo sản phẩm độc hại (thuốc lá, rượu, cần sa); văn hóa phẩm đồi trụy; **tài liệu bí mật quốc gia**, bí mật nhà nước, bí mật kinh doanh, bí mật cá nhân; … và các sản phẩm thuộc Danh sách cấm/hạn chế của Shopee. | `77246_1279_2847` — mục 2, điểm a–m |
+| 2 | Hàng bị hư hại trong quá trình vận chuyển thì phải khiếu nại trong vòng bao nhiêu ngày? *(câu cần lọc metadata)* | Tùy đối tượng: **Người Bán** — hàng bị hư hại/không nguyên vẹn khi hoàn trả: **03 ngày**, hàng thất lạc khi hoàn trả: **07 ngày**, tính từ khi đơn cập nhật trạng thái chuyển hoàn thành công. **Người Mua** — gửi yêu cầu Trả hàng/Hoàn tiền trong **15 ngày** kể từ khi giao hàng thành công. | `77250_14001_14778` — mục D.1.b (seller) **vs** `77251` mục 3.2 (buyer) |
+| 3 | Người mua được yêu cầu trả hàng/hoàn tiền trong những trường hợp nào? | 7 trường hợp: không nhận được hàng / không nhận đủ hàng / nhận phải **hàng giả, hàng nhái**; sản phẩm lỗi hoặc hư hại khi vận chuyển; người bán giao sai sản phẩm; hàng khác biệt rõ rệt so với mô tả; sản phẩm hết hạn sử dụng; người bán tự thỏa thuận đồng ý cho trả hàng; hàng còn nguyên vẹn nguyên bao bì nhưng người mua không còn nhu cầu (**Trả hàng COM**). | `77251_2180_3085` — mục 3.1 |
+| 4 | Quy trình giải quyết tranh chấp của Shopee gồm mấy bước và Shopee đưa ra hướng giải quyết trong bao lâu? | **4 bước** (Bước 1 người mua tạo khiếu nại trong mục "Đơn Mua" → Bước 2 bộ phận khiếu nại tiếp nhận → Bước 3 xử lý theo Chính sách Trả hàng và Hoàn tiền, với tranh chấp khác thì đưa hướng giải quyết trong **07 ngày làm việc** kể từ khi nhận đủ thông tin/tài liệu → Bước 4 chuyển cơ quan nhà nước có thẩm quyền nếu vượt thẩm quyền của sàn). | `77265_907_2658` — mục 1, Bước 1–4 (bản sao: `77245_14121_15870`) |
+| 5 | Những nội dung nào bị nghiêm cấm đăng bán trên Shopee? | Gồm: nội dung phản động, chống phá, bài xích tôn giáo, khiêu dâm, bạo lực, xâm phạm chủ quyền/an ninh quốc gia; thông tin rác làm mất uy tín dịch vụ Shopee; xúc phạm người khác; tuyên truyền điều pháp luật nghiêm cấm (heroin, thuốc lắc…); quảng cáo sản phẩm độc hại (thuốc lá, rượu, cần sa); văn hóa phẩm đồi trụy; **tài liệu bí mật quốc gia**, bí mật nhà nước, bí mật kinh doanh, bí mật cá nhân; … và các sản phẩm thuộc Danh sách cấm/hạn chế của Shopee. | `77246_1279_2847` — mục 2, điểm a–m (bản sao: `77245_52118_52876`) |
 
 **Chuỗi neo để chấm ở mức nội dung** (theo CP6: không chỉ kiểm `doc_id` trong top-3, mà kiểm ngữ cảnh truy xuất được có thật sự chứa đáp án). `bench.py` khai báo cho mỗi câu một chuỗi bắt buộc xuất hiện:
 
@@ -131,9 +131,19 @@ Chạy `ChunkingStrategyComparator().compare()` trên 2-3 tài liệu:
 |---|---|---|---|
 | 1 | `77262_2628_3865` | `06 (sáu) ngày lịch` | — |
 | 2 | `77250_14001_14778` | `03 ngày` | `{"audience": "seller"}` |
-| 3 | `77251_2282_2520` | `hàng giả, hàng nhái` | — |
-| 4 | `77265_1490_2033` | `07 ngày làm việc` | — |
-| 5 | `77246_1279_2847` | `bí mật quốc gia` | — |
+| 3 | `77251_2180_3085` | `sai kích cỡ, sai màu sắc` | — |
+| 4 | `77265_907_2658` + `77245_14121_15870` | `trong vòng 07 ngày làm việc kể từ ngày nhận được đầy đủ` | — |
+| 5 | `77246_1279_2847` + `77245_52118_52876` | `bí mật quốc gia` | — |
+
+**File máy đọc được: `data/shopee-ecommerce/gold.json`**, sinh bởi `scripts/make_gold.py`. Mỗi mục gồm `query`, `gold_answer`, `gold_spans`, `gold_chunk_ids`, `anchor`, `metadata_filter` và `evidence` (nguyên văn đoạn văn bản gold). `bench.py` đọc thẳng file này.
+
+**Quy tắc chọn chuỗi neo:** neo chỉ được xuất hiện **bên trong vùng gold, trên toàn corpus** — `scripts/make_gold.py` assert điều này. Nếu neo lọt ra chỗ khác thì một chunk lấy từ đoạn không liên quan vẫn pass phép kiểm nội dung, tức quay về đúng cái bẫy "thổi phồng kết quả" mà CP6 cảnh báo. Ba lần assert này đã bắt lỗi thật khi soạn bộ câu hỏi:
+
+- `hàng giả, hàng nhái` (dự định cho Q3) còn nằm trong 77243 và 77262 → đổi sang `sai kích cỡ, sai màu sắc`
+- `Trả hàng COM` xuất hiện **25 lần** rải khắp 77251 → loại
+- `07 ngày làm việc` và `bí mật quốc gia` cũng có trong 77245 → nới neo Q4 thành cả cụm dài, và thừa nhận 77245 là **vùng gold thứ hai** cho Q4/Q5
+
+**Tài liệu 77245 (Quy chế hoạt động) chép lại nguyên khối nhiều chính sách khác** — quy trình tranh chấp của 77265 và danh mục cấm đăng bán của 77246. Vì vậy Q4 và Q5 có **hai vùng gold**: retrieval trả về bản nào cũng là trả lời đúng, ép chọn một bản sẽ chấm oan.
 
 **Quy ước định danh chunk: `{doc_id}_{start_offset}_{end_offset}`** — offset ký tự tính trên **phần thân** tài liệu (sau khi bỏ YAML frontmatter), nửa khoảng `[start, end)`. `Document.id = f"{doc_id}_{start}_{end}"`, còn `metadata["doc_id"]` vẫn là tên file gốc.
 
