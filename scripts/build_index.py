@@ -14,6 +14,7 @@ tài liệu nữa.
 from __future__ import annotations
 
 import argparse
+import importlib
 import os
 import sys
 from pathlib import Path
@@ -22,15 +23,28 @@ from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.chunking import FixedSizeChunker, RecursiveChunker, SentenceChunker
 from src.embeddings import GeminiEmbedder, LocalEmbedder, OpenAIEmbedder, _mock_embed
 from src.indexing import INDEX_ROOT, chunk_corpus, save_chunks, save_vectors
 
-STRATEGIES = {
-    "fixed": lambda: FixedSizeChunker(chunk_size=800, overlap=80),
-    "sentence": lambda: SentenceChunker(max_sentences_per_chunk=3, max_chars=1000),
-    "recursive": lambda: RecursiveChunker(chunk_size=800),
-}
+
+def make_chunker(package: str, strategy: str):
+    """Lấy chunker từ package của người nộp bài — mỗi thành viên tự viết src/ của mình.
+
+    SentenceChunker của mỗi người có chữ ký khác nhau (max_chars là thứ tôi tự
+    thêm), nên thử tham số đầy đủ trước rồi lùi về tham số chuẩn của lab.
+    """
+    chunking = importlib.import_module(f"{package}.chunking")
+    if strategy == "fixed":
+        return chunking.FixedSizeChunker(chunk_size=800, overlap=80)
+    if strategy == "recursive":
+        return chunking.RecursiveChunker(chunk_size=800)
+    try:
+        return chunking.SentenceChunker(max_sentences_per_chunk=3, max_chars=1000)
+    except TypeError:
+        return chunking.SentenceChunker(max_sentences_per_chunk=3)
+
+
+STRATEGIES = ["fixed", "sentence", "recursive"]
 
 
 def make_embedder(provider: str):
@@ -47,13 +61,14 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--strategy", choices=STRATEGIES, default="recursive")
     parser.add_argument("--provider", default=None, help="gemini | openai | local | mock")
+    parser.add_argument("--package", default="src", help="package chứa code của người nộp, vd src_khang")
     args = parser.parse_args()
 
     load_dotenv(override=False)
     provider = (args.provider or os.getenv("EMBEDDING_PROVIDER", "mock")).strip().lower()
 
-    documents = chunk_corpus(STRATEGIES[args.strategy]())
-    out_dir = INDEX_ROOT / args.strategy
+    documents = chunk_corpus(make_chunker(args.package, args.strategy))
+    out_dir = INDEX_ROOT / args.package / args.strategy
     count = save_chunks(out_dir / "chunks.jsonl", documents)
     print(f"[1/2] chunk : {count} chunk → {out_dir / 'chunks.jsonl'}")
 

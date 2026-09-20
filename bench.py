@@ -16,6 +16,7 @@ top-3 bằng đúng tài liệu gold mà không chunk nào chứa câu trả l�
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
 import os
 from pathlib import Path
@@ -24,7 +25,6 @@ from dotenv import load_dotenv
 
 from src.embeddings import GeminiEmbedder, LocalEmbedder, OpenAIEmbedder, _mock_embed
 from src.indexing import INDEX_ROOT, PrecomputedEmbedder, load_chunks, load_vectors
-from src.store import EmbeddingStore
 
 GOLD_PATH = Path("data/shopee-ecommerce/gold.json")
 
@@ -67,15 +67,17 @@ def main() -> int:
     parser.add_argument("--strategy", default="recursive")
     parser.add_argument("--provider", default=None, help="gemini | openai | local | mock")
     parser.add_argument("--top-k", type=int, default=3)
+    parser.add_argument("--package", default="src", help="package chứa code của người nộp, vd src_khang")
     args = parser.parse_args()
 
     load_dotenv(override=False)
     provider = (args.provider or os.getenv("EMBEDDING_PROVIDER", "mock")).strip().lower()
 
-    index_dir = INDEX_ROOT / args.strategy
+    EmbeddingStore = importlib.import_module(f"{args.package}.store").EmbeddingStore
+    index_dir = INDEX_ROOT / args.package / args.strategy
     if not (index_dir / "vectors.npz").exists():
         print(f"Chưa có index ở {index_dir}. Chạy trước:")
-        print(f"  python scripts/build_index.py --strategy {args.strategy} --provider {provider}")
+        print(f"  python scripts/build_index.py --strategy {args.strategy} --provider {provider} --package {args.package}")
         return 1
 
     documents = load_chunks(index_dir / "chunks.jsonl")
@@ -88,6 +90,7 @@ def main() -> int:
         backend_name=f"{model} ({dimensions}d, index có sẵn)",
     )
 
+    print(f"Package    : {args.package}")
     print(f"Chiến lược : {args.strategy}")
     print(f"Index      : {len(documents)} chunk từ {index_dir}")
     print(f"Backend    : {embedder._backend_name}\n")

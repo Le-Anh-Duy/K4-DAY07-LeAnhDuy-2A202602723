@@ -16,8 +16,21 @@ GEMINI_EMBEDDING_MODEL = "gemini-embedding-001"
 EMBEDDING_PROVIDER_ENV = "EMBEDDING_PROVIDER"
 
 
+class DailyQuotaExceeded(RuntimeError):
+    """Hết hạn mức NGÀY — chờ thêm vô ích, phải sang hôm sau hoặc đổi backend."""
+
+
 def _retry_delay_seconds(error: Exception, default: float = 62.0) -> float:
-    """Lấy retryDelay Google gợi ý trong thông báo 429; không có thì dùng mặc định."""
+    """Lấy retryDelay Google gợi ý trong thông báo 429; không có thì dùng mặc định.
+
+    Hạn mức phút thì chờ rồi chạy tiếp được, còn hạn mức ngày (quotaId chứa
+    'PerDay') thì chờ 60 giây chẳng giải quyết gì — phải báo hỏng ngay.
+    """
+    if "PerDay" in str(error):
+        raise DailyQuotaExceeded(
+            "Hết hạn mức embedding trong ngày của Gemini free tier (1000 request/ngày). "
+            "Chờ sang ngày mới, hoặc chạy lại với --provider local."
+        ) from error
     match = re.search(r"retryDelay['\"]?:\s*['\"]?(\d+(?:\.\d+)?)s", str(error))
     return float(match.group(1)) + 2.0 if match else default
 
