@@ -35,93 +35,109 @@ class FixedSizeChunker:
         return chunks
 
 
-import re
-
 class SentenceChunker:
     """
     Split text into chunks of at most max_sentences_per_chunk sentences.
 
-    Handled edge cases:
-    - Decimals & version numbers: 1.5, 3.14, v2.0
-    - Ellipsis: '...' or '…'
-    - Common abbreviations: TS., PGS., ThS., BS., v.v., e.g., i.e., Mr., Dr.
-    - URLs & Emails: example.com, test@domain.vn
-    - Closing quotes/brackets after punctuation: ." or !)
-    - Multi-line breaks & extra whitespace
+    A sentence ends at ".", "!", "?" or "…" (plus any closing quote/bracket)
+    followed by whitespace. That trailing-whitespace requirement alone already
+    rules out decimals (1.5), versions (v2.0), URLs and emails, because the dot
+    inside them is never followed by a space.
+
+    Two vetoes are applied on top, both driven by the token in front of the dot:
+        - abbreviations: TS., ThS., Mr., v.v., e.g. ...
+        - list/clause numbering: "1.", "3.1.", "a.", "i." — very common in the
+          Shopee policy corpus, where a break there would strip the numbering
+          off the clause it labels and leave a 3-character fragment behind.
+
+    Known limitation: an abbreviation outside ABBREVIATIONS still splits wrongly.
     """
 
-    # Danh sách các từ viết tắt phổ biến (Việt + Anh)
-    ABBREVIATIONS = [
-        r"TS", r"ThS", r"PGS", r"GS", r"BS", r"Thầy",
-        r"Mr", r"Mrs", r"Ms", r"Dr", r"Prof",
-        r"v\.v", r"etc", r"e\.g", r"i\.e", r"tp", r"TP"
-    ]
+    # Không có dấu chấm cuối; so khớp không phân biệt hoa thường.
+    ABBREVIATIONS = {
+        "ts", "ths", "pgs", "gs", "bs", "cn", "kts",
+        "mr", "mrs", "ms", "dr", "prof", "st",
+        "v.v", "vv", "etc", "e.g", "i.e", "tp", "q", "p",
+    }
 
-    def __init__(self, max_sentences_per_chunk: int = 3) -> None:
+    # Dấu kết thúc câu + dấu đóng đi liền, và bắt buộc có khoảng trắng phía sau.
+    _BREAK = re.compile(r"[.!?…]+[\"'’”»)\]]*(?=\s|$)")
+    # Token đứng ngay trước dấu chấm (phần không phải khoảng trắng).
+    _TOKEN = re.compile(r"\S+$")
+    # Đánh số mục: 1 / 3.1 / 10.2.3
+    _NUMBERING = re.compile(r"^\d+(?:\.\d+)*$")
+    # Đầu mục liệt kê ngay sau dấu chấm: "a.", "b)", "iv.", "3.", "3.1."
+    _LIST_MARKER = re.compile(r"^(?:[a-z]{1,2}|[ivx]{1,4}|\d+(?:\.\d+)*)[.)]", re.IGNORECASE)
+
+    def __init__(self, max_sentences_per_chunk: int = 3, max_chars: int = 1000) -> None:
         self.max_sentences_per_chunk = max(1, max_sentences_per_chunk)
-        self._build_regex()
+        self.max_chars = max_chars
 
-    def _build_regex(self) -> None:
-        abbrev_pattern = "|".join(self.ABBREVIATIONS)
+    def _is_false_break(self, text: str, punct_start: int, punct_end: int) -> bool:
+        """True nếu dấu chấm tại vị trí này không thực sự kết thúc câu."""
+        match = self._TOKEN.search(text, 0, punct_start)
+        raw = match.group().rstrip(".!?…") if match else ""
+        token = raw.lower()
+        if token:
+            if token in self.ABBREVIATIONS:
+                return True
+            if self._NUMBERING.match(token):
+                return True
+            # Một chữ cái đơn: viết tắt tên riêng ("A. Nguyễn") hoặc mục a./b./i.
+            if len(token) == 1 and token.isalpha():
+                return True
+            # Số La Mã viết hoa đầu mục ("XII."). Bắt buộc viết hoa để không
+            # nhận nhầm các từ tiếng Việt như "vi", "mi".
+            if len(raw) > 1 and raw.isupper() and set(raw) <= set("IVXLCDM"):
+                return True
 
-        # Regex tách câu:
-        # 1. (?<!\b(?:...)\.)  : Không tách nếu đứng sau từ viết tắt
-        # 2. (?<!\d)           : Không tách sau số (tránh 1.5, 2.0)
-        # 3. (?<!\.\.)         : Không tách nếu là dấu 3 chấm (...)
-        # 4. ([.!?…]+[\"\')\]]*): Bắt dấu kết thúc câu kèm dấu ngoặc kép/đơn đi liền sau
-        # 5. (?!\S)            : Phía sau phải là khoảng trắng hoặc hết dòng (tránh URL/domain)
-        # 6. \s+               : Nuốt khoảng trắng kế tiếp
-        self._pattern = re.compile(
-            rf"""
-            (?<!\b(?:{abbrev_pattern})) # Bỏ qua viết tắt
-            (?<!\d)                     # Bỏ qua số thập phân
-            (?<!\.\.)                   # Bỏ qua ellipsis (...)
-            ([.!?…]+[\"\')\]]*)         # Dấu kết thúc + đóng ngoặc (nếu có)
-            (?!\S)                      # Tránh URL hoặc tên file (như domain.com)
-            \s+                         # Khoảng trắng phân tách
-            """,
-            re.VERBOSE | re.IGNORECASE,
-        )
+        # Câu mới phải mở đầu bằng chữ hoa. Chữ thường phía sau nghĩa là dấu chấm
+        # nằm giữa câu — điển hình là "nói... rồi im lặng" hay 'hỏi "?" rồi đi'.
+        # Ngoại lệ: đầu mục liệt kê ("a.", "iv.") cũng viết thường nhưng là mục mới.
+        nxt = text[punct_end:].lstrip()
+        if nxt and nxt[0].islower() and not self._LIST_MARKER.match(nxt):
+            return True
+        return False
 
     def _split_into_sentences(self, text: str) -> list[str]:
-        # Dùng capture group ([.!?…]+...) để giữ lại dấu câu khi split
-        parts = self._pattern.split(text)
-        sentences = []
-        
-        # parts sẽ có dạng: [đoạn 1, dấu câu 1, đoạn 2, dấu câu 2, ..., đoạn cuối]
-        i = 0
-        while i < len(parts):
-            sentence = parts[i].strip()
-            # Nếu có dấu câu đi kèm ở phần tử tiếp theo, nối lại
-            if i + 1 < len(parts):
-                punct = parts[i + 1].strip()
-                sentence = f"{sentence}{punct}".strip()
-                i += 2
-            else:
-                i += 1
-            
+        sentences: list[str] = []
+        cursor = 0
+        for match in self._BREAK.finditer(text):
+            if self._is_false_break(text, match.start(), match.end()):
+                continue
+            sentence = text[cursor : match.end()].strip()
             if sentence:
                 sentences.append(sentence)
-
+            cursor = match.end()
+        tail = text[cursor:].strip()
+        if tail:
+            sentences.append(tail)
         return sentences
 
     def chunk(self, text: str) -> list[str]:
-        if not text or not text.strip():
+        if not text.strip():
             return []
 
-        # Chuẩn hóa khoảng trắng thừa & xuống dòng rải rác
-        cleaned_text = re.sub(r"[ \t]+", " ", text.strip())
+        # Gộp khoảng trắng ngang thừa; giữ nguyên xuống dòng để không dính chữ.
+        cleaned = re.sub(r"[ \t\r\f\v ]+", " ", text.strip())
 
-        sentences = self._split_into_sentences(cleaned_text)
+        sentences = self._split_into_sentences(cleaned)
         size = self.max_sentences_per_chunk
 
-        chunks = []
+        chunks: list[str] = []
         for i in range(0, len(sentences), size):
-            chunk_content = " ".join(sentences[i : i + size]).strip()
-            if chunk_content:
-                chunks.append(chunk_content)
-
+            group = " ".join(sentences[i : i + size])
+            if not group:
+                continue
+            # Văn bản quy định liệt kê bằng dấu chấm phẩy — "(m) ...; (n) ...;" —
+            # và bảng phí thì không có dấu kết câu nào, nên một "câu" có thể dài
+            # hơn 3000 ký tự. Hạ xuống RecursiveChunker cho những khối như vậy.
+            if self.max_chars and len(group) > self.max_chars:
+                chunks.extend(RecursiveChunker(chunk_size=self.max_chars).chunk(group))
+            else:
+                chunks.append(group)
         return chunks
+
 
 class RecursiveChunker:
     """
@@ -164,13 +180,15 @@ class RecursiveChunker:
             if len(candidate) <= self.chunk_size:
                 buffer = candidate
                 continue
-            if buffer:
-                chunks.append(buffer)
-                buffer = ""
-            # Still too big on its own: drop to the next, finer separator.
             if len(piece) > self.chunk_size:
-                chunks.extend(self._split(piece, rest))
+                # Đệ quy trên cả candidate chứ không riêng piece: buffer lúc này
+                # thường là đầu mục ("m.", "i.") — xả riêng thì thành chunk 1 ký tự
+                # và mảnh đi sau mất luôn nhãn của nó.
+                chunks.extend(self._split(candidate, rest))
+                buffer = ""
             else:
+                if buffer:
+                    chunks.append(buffer)
                 buffer = piece
         if buffer:
             chunks.append(buffer)

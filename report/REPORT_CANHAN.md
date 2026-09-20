@@ -51,10 +51,40 @@ Giải thích cách tiếp cận của bạn khi lập trình (implement) các p
 ### Các hàm chia nhỏ (Chunking Functions)
 
 **`SentenceChunker.chunk`** — hướng tiếp cận:
-> *Viết 2-3 câu: dùng biểu thức chính quy (regex) gì để phát hiện câu? Xử lý trường hợp ngoại lệ (edge case) nào?*
+
+Tôi **không dùng `re.split`** mà quét ứng viên ngắt câu bằng `finditer` rồi phủ quyết từng chỗ bằng Python thường. Lý do: bản đầu tôi viết lookbehind kiểu `(?<!(?:TS|ThS|v\.v))` để chặn viết tắt, nhưng `re` của Python **bắt buộc lookbehind có độ rộng cố định**, mà các nhánh này dài ngắn khác nhau nên `re.compile` ném `re.error: look-behind requires fixed-width pattern` ngay trong `__init__` — cả 7 test liên quan fail. Quét rồi phủ quyết bỏ được ràng buộc đó và đọc cũng dễ hơn.
+
+Regex tìm ứng viên là `[.!?…]+[\"'’”»)\]]*(?=\s|$)`: bắt cụm dấu kết câu kèm dấu đóng ngoặc/ngoặc kép đi liền, và **bắt buộc phía sau là khoảng trắng**. Riêng ràng buộc cuối này đã xử lý xong một loạt ca ngoại lệ mà không cần luật riêng — `1.5`, `v2.0`, `help.shopee.vn`, `test@domain.vn` đều có dấu chấm nằm giữa hai ký tự không phải khoảng trắng nên không bao giờ thành ứng viên.
+
+Bốn phủ quyết còn lại, nhìn vào **token đứng ngay trước** dấu chấm:
+
+| Phủ quyết | Ví dụ bị chặn | Vì sao cần |
+|---|---|---|
+| Từ viết tắt trong `ABBREVIATIONS` | `TS.`, `ThS.`, `Mr.`, `v.v.` | Danh xưng và "vân vân" rất hay đứng giữa câu |
+| Đánh số điều khoản `^\d+(\.\d+)*$` | `3.1.`, `10.2.3.` | Corpus Shopee đánh số dày đặc; ngắt ở đây sẽ tách `"3.1."` thành mảnh 4 ký tự và điều khoản mất luôn số hiệu |
+| Một chữ cái đơn | `a.`, `b.`, `A. Nguyễn` | Vừa là đầu mục liệt kê vừa là viết tắt tên riêng |
+| Số La Mã **viết hoa** | `XII.` | Bắt buộc `isupper()` để không nhận nhầm từ tiếng Việt như "vi", "mi" |
+
+Thêm một phủ quyết nhìn về **phía sau**: nếu ký tự đầu tiên sau dấu chấm là **chữ thường** thì đó là dấu chấm giữa câu, không phải kết câu — đây là cách duy nhất bắt được `"Anh ấy nói... rồi im lặng."` và `'Anh ta hỏi "Bao giờ giao?" rồi đi.'`. Ngoại lệ của ngoại lệ: đầu mục liệt kê (`a.`, `iv.`) cũng viết thường nhưng đúng là mục mới, nên có `_LIST_MARKER` chừa ra.
+
+**Edge case tôi biết là vẫn chưa xử lý được:** viết tắt nằm ngoài danh sách `ABBREVIATIONS` vẫn bị cắt sai — đây là cách tiếp cận theo từ điển nên không thể phủ hết. Muốn triệt để thì phải dùng mô hình tách câu đã huấn luyện (`underthesea`, `pyvi`), nhưng như vậy là thêm một phụ thuộc chỉ để xử lý vài trường hợp hiếm trong corpus này.
+
+**Một phát hiện từ dữ liệu thật, không phải từ regex:** đo trên corpus thì có chunk dài **3025 ký tự**. Không phải lỗi tách câu — văn bản quy định liệt kê bằng **dấu chấm phẩy** (`(m) ...; (n) ...;`) và bảng phí thì **không có dấu kết câu nào**, nên cả khối là một "câu" hợp lệ. Đếm câu không cứu được ca này, nên tôi thêm trần `max_chars=1000`; khối nào vượt thì hạ xuống `RecursiveChunker` thay vì viết logic cắt mới. Sau khi thêm: chunk dài nhất toàn corpus còn **998** ký tự.
 
 **`RecursiveChunker.chunk` / `_split`** — hướng tiếp cận:
-> *Viết 2-3 câu: thuật toán hoạt động thế nào? Base case (trường hợp cơ sở) là gì?*
+
+Thuật toán chạy **hai chiều** trên cùng một vòng lặp, và tôi nghĩ phần lớn người viết chỉ làm một chiều:
+
+- *Đệ quy xuống:* cắt bằng separator ưu tiên cao nhất (`"\n\n"` — ranh giới đoạn) để giữ ngữ nghĩa lớn; mảnh nào vẫn dài hơn `chunk_size` thì gọi lại `_split` với danh sách separator còn lại (`"\n"` → `". "` → `" "` → `""`).
+- *Gom lên:* các mảnh nhỏ liền kề được nối vào `buffer` cho tới sát `chunk_size`. Thiếu bước này, một file toàn dòng ngắn sẽ sinh ra hàng trăm chunk vụn 5–10 ký tự.
+
+**Ba base case:** text rỗng sau `strip()` → `[]`; text đã vừa `chunk_size` → `[text]`; hết separator (kể cả khi người dùng truyền thẳng `separators=[]`, đúng ca của test `test_empty_separators_falls_back_gracefully`) → cắt cứng theo `chunk_size` bằng `_hard_cut`.
+
+**Bug tôi tìm ra khi chạy trên corpus thật:** chunker đẻ ra chunk dài **đúng 1 ký tự** — `'m'` và `'l'`. Truy ra nguyên nhân: dòng `m. Các sản phẩm nằm trong Danh sách cấm…` bị tách ở separator `". "` thành `["m", "Các sản phẩm…"]`; phần đuôi dài hơn `chunk_size` nên code cũ **xả `buffer` ra thành chunk riêng** rồi mới đệ quy trên `piece`. Kết quả là đầu mục `"m"` thành một chunk vô nghĩa, còn nội dung mục đó thì mất luôn nhãn của mình.
+
+Cách sửa: khi gặp `piece` quá dài thì đệ quy trên **cả `candidate`** (tức `buffer + separator + piece`) thay vì chỉ `piece`, nhờ đó đầu mục dính liền với nội dung của nó và dấu phân cách cũng được giữ. Sau khi sửa: **không còn chunk nào dưới 2 ký tự** trên cả 7 tài liệu, và mọi chunk đều ≤ `chunk_size`.
+
+Tôi để lại `tests/test_chunking_edge_cases.py` — 11 ca ngoại lệ ở trên, cộng hai bất biến chạy trên corpus thật (không chunk nào vượt trần, không chunk nào ≤ 1 ký tự) để các lỗi này không âm thầm quay lại.
 
 ### Lớp EmbeddingStore
 
